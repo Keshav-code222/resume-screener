@@ -5,9 +5,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+groq_api_key = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=groq_api_key) if groq_api_key else None
 
 def analyze_resume(resume_text: str, job_description: str):
+    if not client:
+        raise ValueError("GROQ_API_KEY is not set in the environment variables.")
+        
     prompt = f"""
 You are an expert Indian placement consultant.
 Analyze this resume against the job description and respond ONLY in valid 
