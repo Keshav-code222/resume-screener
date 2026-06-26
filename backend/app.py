@@ -1,10 +1,11 @@
+import os
+from ai import analyze_resume
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import bcrypt
-import os
 from datetime import timedelta
 from werkzeug.utils import secure_filename
 from resume_parser import parse_resume

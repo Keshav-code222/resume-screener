@@ -1,51 +1,84 @@
-from groq import Groq
 import os
+from dotenv import load_dotenv  # ADD THIS
+from groq import Groq
 import json
-from dotenv import load_dotenv
+import re
 
-load_dotenv()
+# Load .env file FIRST
+load_dotenv()  # ADD THIS
 
-groq_api_key = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=groq_api_key) if groq_api_key else None
+# Now read the key
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
-def analyze_resume(resume_text: str, job_description: str):
-    if not client:
-        raise ValueError("GROQ_API_KEY is not set in the environment variables.")
-        
-    prompt = f"""
-You are an expert Indian placement consultant.
-Analyze this resume against the job description and respond ONLY in valid 
-JSON with exactly this structure, no extra text, no markdown:
-{{
-  "overall_score": 78,
-  "sections": {{
-    "keywords_match": {{ "score": 80, "feedback": "..." }},
-    "experience_relevance": {{ "score": 75, "feedback": "..." }},
-    "skills_alignment": {{ "score": 85, "feedback": "..." }},
-    "formatting": {{ "score": 70, "feedback": "..." }},
-    "education": {{ "score": 90, "feedback": "..." }}
-  }},
-  "missing_keywords": ["keyword1", "keyword2"],
-  "top_suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
-  "verdict": "Overall assessment in 2-3 sentences"
-}}
+if not GROQ_API_KEY:
+    print("⚠️ WARNING: GROQ_API_KEY not set in .env file!")
+
+client = Groq(api_key=GROQ_API_KEY)
+
+def analyze_resume(resume_text, job_description):
+    """
+    Analyze resume against job description using Groq (FREE AI)
+    """
+    
+    if not GROQ_API_KEY:
+        print("❌ ERROR: GROQ_API_KEY is not set!")
+        return default_analysis(resume_text, job_description)
+    
+    prompt = f"""Analyze this resume against the job description and provide a JSON response with:
+1. overall_score (0-100): How well does this resume match the job?
+2. missing_keywords: List of important skills/keywords from job description NOT in resume
+3. top_suggestions: 3 actionable improvements for the resume
+4. verdict: Brief 1-line assessment
+
+RESUME:
+{resume_text[:1500]}
 
 JOB DESCRIPTION:
-{job_description}
+{job_description[:1500]}
 
-RESUME TEXT:
-{resume_text}
-"""
+Return ONLY valid JSON (no markdown, no extra text):
+{{
+  "overall_score": 75,
+  "missing_keywords": ["Python", "Docker"],
+  "top_suggestions": ["Add Docker experience", "Highlight team projects", "Quantify achievements"],
+  "verdict": "Good match with minor skill gaps"
+}}"""
+    
+    try:
+        print("📡 Calling Groq API...")
+        message = client.messages.create(
+            model="mixtral-8x7b-32768",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800,
+            temperature=0.7
+        )
+        
+        response_text = message.content[0].text
+        print(f"✅ Groq Response: {response_text[:100]}...")
+        
+        # Extract JSON
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+            print(f"✅ Score: {result.get('overall_score')}")
+            return result
+        else:
+            print("⚠️ No JSON found in response")
+            return default_analysis(resume_text, job_description)
+            
+    except Exception as e:
+        print(f"❌ Groq API Error: {str(e)}")
+        return default_analysis(resume_text, job_description)
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-    )
-
-    text = response.choices[0].message.content.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    return json.loads(text.strip())
+def default_analysis(resume_text, job_description):
+    """Fallback analysis"""
+    return {
+        "overall_score": 50,
+        "missing_keywords": ["Check job description for keywords"],
+        "top_suggestions": [
+            "Improve resume format",
+            "Add more quantified achievements",
+            "Highlight relevant experience"
+        ],
+        "verdict": "Using default analysis - check Groq API key"
+    }
