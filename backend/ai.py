@@ -46,14 +46,14 @@ Return ONLY valid JSON (no markdown, no extra text):
     
     try:
         print("📡 Calling Groq API...")
-        message = client.messages.create(
-            model="mixtral-8x7b-32768",
+        message = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
             temperature=0.7
-        )
+)
         
-        response_text = message.content[0].text
+        response_text = message.choices[0].message.content
         print(f"✅ Groq Response: {response_text[:100]}...")
         
         # Extract JSON

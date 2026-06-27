@@ -1,3 +1,4 @@
+import json
 import os
 from ai import analyze_resume
 from flask import Flask, jsonify, request
@@ -182,7 +183,6 @@ def create_analysis():
         if not resume:
             return {'error': 'Resume not found'}, 404
             
-        # Use Groq for Analysis
         from ai import analyze_resume
         import json
         
@@ -190,7 +190,6 @@ def create_analysis():
         match_score = result.get('overall_score', 0)
         missing_skills = result.get('missing_keywords', [])
         
-        # Convert top suggestions to recommendations format
         recommendations = [
             {'type': 'content', 'priority': 'high', 'text': sug, 'action': 'Update resume'}
             for sug in result.get('top_suggestions', [])
@@ -202,7 +201,7 @@ def create_analysis():
                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
             (resume_id, job_title, job_description, match_score, json.dumps(missing_skills), json.dumps(recommendations))
         )
-        analysis_id = cur.fetchone()[0]
+        analysis_id = cur.fetchone()['id']
         conn.commit()
         
         return {
@@ -210,9 +209,11 @@ def create_analysis():
             'match_score': match_score,
             'missing_skills': missing_skills,
             'recommendations': recommendations,
-            'verdict': result.get('verdict', '')
         }, 201
     except Exception as e:
+        print(f"❌ ANALYSIS ERROR: {str(e)}")  # ← ADD THIS
+        import traceback
+        traceback.print_exc()  # ← ADD THIS
         return {'error': str(e)}, 500
     finally:
         cur.close()
