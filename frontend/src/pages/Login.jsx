@@ -1,211 +1,197 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
-// FIX: Use environment variable for production, localhost for development
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+});
+
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignup, setIsSignup] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!email || !password) {
-      setError('Email and password are required');
-      return;
-    }
-    
-    if (isSignup && !fullName) {
-      setError('Full name is required');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+    if (!email || !password) { setError('Email and password required'); return; }
+    if (isSignup && !fullName) { setError('Full name required'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
 
     setLoading(true);
     setError('');
 
-    const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
-    const payload = isSignup 
-      ? { email, password, full_name: fullName }
-      : { email, password };
-
     try {
+      const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
+      const payload = isSignup ? { email, password, full_name: fullName } : { email, password };
       const res = await API.post(endpoint, payload);
-      
-      if (res.data.access_token) {
-        localStorage.setItem('token', res.data.access_token);
-        localStorage.setItem('user_id', res.data.user_id);
-        
-        // Redirect to dashboard
-        navigate('/dashboard');
-      } else {
-        setError('Invalid response from server');
-      }
+      localStorage.setItem('token', res.data.access_token);
+      navigate('/dashboard');
     } catch (err) {
-      console.error('Auth error:', err);
-      
-      // Better error messages
-      if (err.response?.status === 409) {
-        setError('Email already exists. Try logging in instead.');
-      } else if (err.response?.status === 401) {
-        setError('Invalid email or password');
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else if (err.message === 'Network Error') {
-        setError('Cannot connect to server. Check your internet connection.');
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+      if (err.response?.status === 409) setError('Email already exists. Sign in instead.');
+      else if (err.response?.status === 401) setError('Invalid email or password.');
+      else if (err.message === 'Network Error') setError('Cannot reach server. Is backend running?');
+      else setError(err.response?.data?.error || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setIsSignup(!isSignup);
-    setError('');
-    setEmail('');
-    setPassword('');
-    setFullName('');
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="inline-block bg-white rounded-full p-3 mb-4">
-            <svg className="h-8 w-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h12v10H4V5z" />
-            </svg>
+    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
+      {/* Left Panel */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 48px', borderRight: '1px solid #111' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/')}>
+          <div style={{ width: '28px', height: '28px', background: 'white', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'black', fontWeight: '900', fontSize: '14px' }}>R</span>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Resume Screener</h1>
-          <p className="text-blue-100">Analyze & Optimize Your Resume with AI</p>
+          <span style={{ color: 'white', fontWeight: '700', fontSize: '16px' }}>resumap.</span>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            {isSignup ? '✨ Create Account' : '👋 Welcome Back'}
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {isSignup 
-              ? 'Sign up to start analyzing your resume' 
-              : 'Sign in to your account'}
-          </p>
+        <div style={{ maxWidth: '420px' }}>
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <p style={{ color: '#444', fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>
+              {isSignup ? 'Create account' : 'Welcome back'}
+            </p>
+            <h1 style={{ fontSize: '36px', fontWeight: '800', letterSpacing: '-1px', color: 'white', marginBottom: '8px' }}>
+              {isSignup ? 'Start navigating\nyour career.' : 'Sign in to\nResuMap.'}
+            </h1>
+            <p style={{ color: '#6b7280', fontSize: '15px', marginBottom: '40px' }}>
+              {isSignup ? 'Free to start. No credit card required.' : 'Your career dashboard awaits.'}
+            </p>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm font-semibold">❌ {error}</p>
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name (Signup only) */}
-            {isSignup && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition"
-                />
-              </div>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '12px 16px', color: '#f87171', fontSize: '14px', marginBottom: '24px' }}
+              >
+                {error}
+              </motion.div>
             )}
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition"
-              />
-              <p className="text-xs text-gray-500 mt-1">Min 6 characters</p>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2.5 rounded-lg transition transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center space-x-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>{isSignup ? 'Creating...' : 'Signing in...'}</span>
-                </>
-              ) : (
-                <span>{isSignup ? '✨ Sign Up' : '🚀 Sign In'}</span>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {isSignup && (
+                <div>
+                  <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
               )}
-            </button>
-          </form>
+              <div>
+                <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Email</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
 
-          {/* Toggle Auth Mode */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-center text-gray-600">
-              {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button
-                onClick={toggleMode}
+              <motion.button
+                whileHover={{ background: '#f0f0f0' }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
                 disabled={loading}
-                className="text-blue-600 font-semibold hover:text-blue-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition"
+                style={{ width: '100%', padding: '14px', background: 'white', border: 'none', borderRadius: '8px', color: 'black', fontSize: '15px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: '8px' }}
               >
-                {isSignup ? 'Sign In' : 'Sign Up'}
+                {loading ? 'Please wait...' : isSignup ? 'Create account →' : 'Sign in →'}
+              </motion.button>
+            </form>
+
+            <p style={{ color: '#444', fontSize: '14px', marginTop: '24px', textAlign: 'center' }}>
+              {isSignup ? 'Already have an account? ' : "Don't have an account? "}
+              <button onClick={() => { setIsSignup(!isSignup); setError(''); }} style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                {isSignup ? 'Sign in' : 'Sign up free'}
               </button>
             </p>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-blue-100 text-sm">
-            🔒 Your data is secure and encrypted
-          </p>
-        </div>
+        <p style={{ color: '#222', fontSize: '13px' }}>© 2026 ResuMap</p>
+      </div>
+
+      {/* Right Panel - Dark feature showcase */}
+      <div style={{ flex: 1, background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          style={{ width: '100%', maxWidth: '400px' }}
+        >
+          {/* Score Card */}
+          <div style={{ background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '12px', padding: '24px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <span style={{ color: '#6b7280', fontSize: '13px' }}>Resume Match Score</span>
+              <span style={{ color: '#3B82F6', fontSize: '12px', fontWeight: '600' }}>Senior Engineer · Google</span>
+            </div>
+            <div style={{ fontSize: '56px', fontWeight: '800', letterSpacing: '-2px', color: 'white', marginBottom: '16px' }}>87<span style={{ fontSize: '28px', color: '#444' }}>%</span></div>
+            <div style={{ height: '3px', background: '#111', borderRadius: '2px', marginBottom: '20px', overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '87%' }}
+                transition={{ duration: 1.2, delay: 0.8, ease: 'easeOut' }}
+                style={{ height: '100%', background: '#3B82F6', borderRadius: '2px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {['Python', 'React', 'System Design', 'AWS'].map((s, i) => (
+                <motion.span
+                  key={s}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 + i * 0.1 }}
+                  style={{ padding: '4px 10px', background: '#111', border: '1px solid #222', borderRadius: '4px', color: '#9ca3af', fontSize: '12px' }}
+                >
+                  ✓ {s}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+
+          {/* Missing Skills */}
+          <div style={{ background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '12px', padding: '20px', marginBottom: '12px' }}>
+            <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '12px', letterSpacing: '0.05em' }}>MISSING SKILLS</p>
+            {['Kubernetes', 'Go', 'gRPC'].map((s, i) => (
+              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 2 ? '1px solid #111' : 'none' }}>
+                <span style={{ color: '#9ca3af', fontSize: '14px' }}>{s}</span>
+                <span style={{ color: '#3B82F6', fontSize: '12px', cursor: 'pointer' }}>learn →</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Recommendation */}
+          <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '12px', padding: '16px' }}>
+            <p style={{ color: '#3B82F6', fontSize: '12px', fontWeight: '600', marginBottom: '6px' }}>AI RECOMMENDATION</p>
+            <p style={{ color: '#6b7280', fontSize: '13px', lineHeight: '1.5' }}>Add Kubernetes and Go experience to increase your match score to 96% for this role.</p>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

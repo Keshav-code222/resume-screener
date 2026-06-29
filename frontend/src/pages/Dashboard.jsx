@@ -1,25 +1,78 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
-// FIX: Use environment variable for production, localhost for development
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
 });
 
-// FIX: Add token to EVERY request
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+function Sidebar({ user, active, setActive, navigate }) {
+  const links = [
+    { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
+    { id: 'resumes', label: 'My Resumes', icon: '◻' },
+    { id: 'analyze', label: 'Analyze', icon: '◈' },
+  ];
+
+  return (
+    <div style={{ width: '220px', background: '#050505', borderRight: '1px solid #111', display: 'flex', flexDirection: 'column', padding: '24px 0', height: '100vh', position: 'fixed', left: 0, top: 0 }}>
+      <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #111' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '26px', height: '26px', background: 'white', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'black', fontWeight: '900', fontSize: '12px' }}>R</span>
+          </div>
+          <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>resumap.</span>
+        </div>
+      </div>
+
+      <nav style={{ flex: 1, padding: '16px 12px' }}>
+        {links.map((link) => (
+          <motion.button
+            key={link.id}
+            whileHover={{ background: '#111' }}
+            onClick={() => setActive(link.id)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 12px', background: active === link.id ? '#111' : 'transparent',
+              border: 'none', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px',
+              color: active === link.id ? 'white' : '#6b7280',
+              fontSize: '14px', fontWeight: active === link.id ? '600' : '400',
+              textAlign: 'left',
+            }}
+          >
+            <span>{link.icon}</span> {link.label}
+          </motion.button>
+        ))}
+      </nav>
+
+      <div style={{ padding: '16px 12px', borderTop: '1px solid #111' }}>
+        <div style={{ padding: '10px 12px', marginBottom: '8px' }}>
+          <p style={{ color: 'white', fontSize: '13px', fontWeight: '600', margin: 0 }}>{user?.full_name || 'User'}</p>
+          <p style={{ color: '#444', fontSize: '12px', margin: '2px 0 0' }}>{user?.email}</p>
+        </div>
+        <motion.button
+          whileHover={{ color: '#fff' }}
+          onClick={() => { localStorage.removeItem('token'); navigate('/login'); }}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#444', fontSize: '14px', textAlign: 'left' }}
+        >
+          ↩ Sign out
+        </motion.button>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [resumes, setResumes] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [active, setActive] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -33,8 +86,7 @@ export default function Dashboard() {
       const res = await API.get('/api/users/me');
       setUser(res.data);
       setLoading(false);
-    } catch (err) {
-      console.error('Error fetching user:', err);
+    } catch {
       localStorage.removeItem('token');
       navigate('/login');
     }
@@ -44,166 +96,139 @@ export default function Dashboard() {
     try {
       const res = await API.get('/api/resumes');
       setResumes(res.data || []);
-    } catch (err) {
-      console.error('Error fetching resumes:', err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Validate file type
-    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!validTypes.includes(file.type)) {
-      alert('Only PDF and DOCX files are allowed');
-      return;
-    }
-
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-
     try {
-      const res = await API.post('/api/resumes/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      // Add new resume to list
-      setResumes([
-        { 
-          id: res.data.resume_id, 
-          file_name: file.name, 
-          created_at: new Date().toISOString() 
-        },
-        ...resumes
-      ]);
-      
-      alert(`✓ Resume uploaded!\n\nSkills detected:\n${res.data.skills.join(', ')}`);
+      const res = await API.post('/api/resumes/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setResumes(prev => [{ id: res.data.resume_id, file_name: file.name, created_at: new Date().toISOString() }, ...prev]);
     } catch (err) {
-      console.error('Upload error:', err);
-      const errorMsg = err.response?.data?.error || 'Upload failed. Please try again.';
-      alert(`❌ ${errorMsg}`);
+      alert('Upload failed: ' + (err.response?.data?.error || 'Unknown error'));
     } finally {
       setUploading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }}>
+        <p style={{ color: '#444', fontFamily: 'monospace', fontSize: '14px' }}>Loading...</p>
+      </motion.div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Resume Screener</h1>
-            <p className="text-sm text-gray-500">Analyze & Optimize Your Resume</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-gray-800 font-semibold">{user?.full_name || 'User'}</p>
-              <p className="text-sm text-gray-500">{user?.email}</p>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold transition"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
+    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
+      <Sidebar user={user} active={active} setActive={setActive} navigate={navigate} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Upload Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold mb-2 text-gray-800">Upload Your Resume</h2>
-          <p className="text-gray-600 mb-6">Supported formats: PDF, DOCX</p>
-          
-          <label className="flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-blue-400 rounded-lg cursor-pointer hover:bg-blue-50 transition">
-            <div className="text-center">
-              <svg className="mx-auto h-12 w-12 text-blue-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                <path d="M28 8H12a4 4 0 00-4 4v20a4 4 0 004 4h24a4 4 0 004-4V20m-8-12l-4-4m0 0l-4 4m4-4v12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <p className="mt-2 text-gray-700 font-semibold">Click to upload or drag and drop</p>
-              <p className="text-sm text-gray-500">PDF or DOCX (Max 10MB)</p>
+      <main style={{ marginLeft: '220px', flex: 1, padding: '48px' }}>
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ marginBottom: '48px' }}>
+          <p style={{ color: '#444', fontSize: '13px', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 style={{ color: 'white', fontSize: '28px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+            Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.full_name?.split(' ')[0] || 'there'}.
+          </h1>
+        </motion.div>
+
+        {/* Stats Row */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: '#111', borderRadius: '12px', overflow: 'hidden', marginBottom: '32px' }}
+        >
+          {[
+            { label: 'Resumes', value: resumes.length },
+            { label: 'Analyses Run', value: 0 },
+            { label: 'Plan', value: 'Free' },
+          ].map((stat, i) => (
+            <div key={i} style={{ background: '#080808', padding: '24px 28px' }}>
+              <p style={{ color: '#444', fontSize: '12px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px' }}>{stat.label}</p>
+              <p style={{ color: 'white', fontSize: '28px', fontWeight: '800', letterSpacing: '-1px' }}>{stat.value}</p>
             </div>
-            <input 
-              type="file" 
-              accept=".pdf,.docx" 
-              onChange={handleUpload} 
-              disabled={uploading} 
-              className="hidden" 
-            />
+          ))}
+        </motion.div>
+
+        {/* Upload */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          style={{ marginBottom: '32px' }}
+        >
+          <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>Upload Resume</p>
+          <label style={{ display: 'block', border: '1px dashed #222', borderRadius: '10px', padding: '40px', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+            <input type="file" accept=".pdf,.docx" onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
+            {uploading ? (
+              <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.2, repeat: Infinity }} style={{ color: '#6b7280', fontSize: '14px' }}>
+                Uploading...
+              </motion.p>
+            ) : (
+              <>
+                <p style={{ color: 'white', fontSize: '15px', fontWeight: '600', marginBottom: '6px' }}>Drop your resume here</p>
+                <p style={{ color: '#444', fontSize: '13px' }}>PDF or DOCX · Max 10MB</p>
+              </>
+            )}
           </label>
-
-          {uploading && (
-            <div className="mt-4 text-center">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <p className="text-gray-600 mt-2">Uploading your resume...</p>
-            </div>
-          )}
-        </div>
+        </motion.div>
 
         {/* Resumes List */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800">Your Resumes</h2>
-          
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Your Resumes {resumes.length > 0 && `— ${resumes.length}`}
+          </p>
+
           {resumes.length === 0 ? (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="text-gray-600 mt-4">No resumes uploaded yet</p>
-              <p className="text-sm text-gray-500">Upload your first resume to get started!</p>
+            <div style={{ border: '1px solid #111', borderRadius: '10px', padding: '48px', textAlign: 'center' }}>
+              <p style={{ color: '#333', fontSize: '14px' }}>No resumes yet. Upload one above to get started.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {resumes.map((resume) => (
-                <div 
-                  key={resume.id} 
-                  className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-lg hover:shadow-md transition"
+            <div style={{ border: '1px solid #111', borderRadius: '10px', overflow: 'hidden' }}>
+              {resumes.map((resume, i) => (
+                <motion.div
+                  key={resume.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '16px 24px',
+                    borderBottom: i < resumes.length - 1 ? '1px solid #111' : 'none',
+                    background: '#080808',
+                  }}
                 >
-                  <div className="flex items-center space-x-3">
-                    <svg className="h-6 w-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h12v10H4V5z" />
-                    </svg>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ color: '#333', fontFamily: 'monospace', fontSize: '12px' }}>PDF</span>
                     <div>
-                      <p className="font-semibold text-gray-800">{resume.file_name}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(resume.created_at).toLocaleDateString()}
-                      </p>
+                      <p style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{resume.file_name}</p>
+                      <p style={{ color: '#444', fontSize: '12px' }}>{new Date(resume.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <button 
+                  <motion.button
+                    whileHover={{ background: '#3B82F6', color: 'white', borderColor: 'transparent' }}
                     onClick={() => navigate(`/analyze/${resume.id}`)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold transition transform hover:scale-105"
+                    style={{ padding: '8px 20px', background: 'transparent', border: '1px solid #222', borderRadius: '6px', color: '#9ca3af', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
                   >
-                    Analyze
-                  </button>
-                </div>
+                    Analyze →
+                  </motion.button>
+                </motion.div>
               ))}
             </div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </main>
     </div>
   );
 }
