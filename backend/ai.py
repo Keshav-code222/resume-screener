@@ -18,24 +18,22 @@ def analyze_resume(resume_text, job_description):
         from groq import Groq
         client = Groq(api_key=GROQ_API_KEY)
         
-        prompt = f"""Analyze this resume against the job description and provide JSON:
-1. overall_score (0-100)
-2. missing_keywords: List of missing skills
-3. top_suggestions: 3 improvements
-4. verdict: 1-line assessment
+        prompt = f"""You are an expert technical recruiter and resume screener.
+Analyze this resume against the job description and provide a highly accurate assessment.
+Calculate a realistic overall match score from 0 to 100 based on how well the candidate's skills and experience align with the job requirements.
 
 RESUME:
-{resume_text[:1500]}
+{resume_text[:2000]}
 
 JOB DESCRIPTION:
-{job_description[:1500]}
+{job_description[:2000]}
 
-Return ONLY JSON:
+Return ONLY a valid JSON object matching this exact structure (do not include the schema keys, use actual calculated values instead):
 {{
-  "overall_score": 75,
-  "missing_keywords": ["Python", "Docker"],
-  "top_suggestions": ["Add skill", "Improve format", "Quantify results"],
-  "verdict": "Good match"
+  "overall_score": <calculate an integer between 0 and 100>,
+  "missing_keywords": ["List", "of", "missing", "skills"],
+  "top_suggestions": ["Specific actionable advice 1", "Specific actionable advice 2", "Specific actionable advice 3"],
+  "verdict": "A brief 1-line summary assessment."
 }}"""
         
         print("📡 Calling Groq API...")
