@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
@@ -116,10 +116,15 @@ export default function Dashboard() {
   };
 
   if (loading) return (
-    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }}>
-        <p style={{ color: '#444', fontFamily: 'monospace', fontSize: '14px' }}>Loading...</p>
+    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+        <div style={{ width: '48px', height: '48px', background: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+          <span style={{ color: 'black', fontWeight: '900', fontSize: '24px' }}>R</span>
+        </div>
       </motion.div>
+      <motion.p animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ color: '#6b7280', fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Loading Dashboard...
+      </motion.p>
     </div>
   );
 
@@ -191,40 +196,44 @@ export default function Dashboard() {
           </p>
 
           {resumes.length === 0 ? (
-            <div style={{ border: '1px solid #111', borderRadius: '10px', padding: '48px', textAlign: 'center' }}>
-              <p style={{ color: '#333', fontSize: '14px' }}>No resumes yet. Upload one above to get started.</p>
-            </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ border: '1px solid #111', borderRadius: '10px', padding: '48px', textAlign: 'center' }}>
+              <p style={{ color: '#444', fontSize: '14px' }}>No resumes yet. Upload one above to get started.</p>
+            </motion.div>
           ) : (
             <div style={{ border: '1px solid #111', borderRadius: '10px', overflow: 'hidden' }}>
-              {resumes.map((resume, i) => (
-                <motion.div
-                  key={resume.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '16px 24px',
-                    borderBottom: i < resumes.length - 1 ? '1px solid #111' : 'none',
-                    background: '#080808',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ color: '#333', fontFamily: 'monospace', fontSize: '12px' }}>PDF</span>
-                    <div>
-                      <p style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{resume.file_name}</p>
-                      <p style={{ color: '#444', fontSize: '12px' }}>{new Date(resume.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <motion.button
-                    whileHover={{ background: '#3B82F6', color: 'white', borderColor: 'transparent' }}
-                    onClick={() => navigate(`/analyze/${resume.id}`)}
-                    style={{ padding: '8px 20px', background: 'transparent', border: '1px solid #222', borderRadius: '6px', color: '#9ca3af', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+              <AnimatePresence>
+                {resumes.map((resume, i) => (
+                  <motion.div
+                    key={resume.id}
+                    layout
+                    initial={{ opacity: 0, x: -20, height: 0 }}
+                    animate={{ opacity: 1, x: 0, height: 'auto' }}
+                    exit={{ opacity: 0, x: 20, height: 0 }}
+                    transition={{ opacity: { duration: 0.3 }, layout: { duration: 0.4, type: "spring", bounce: 0.2 } }}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '16px 24px',
+                      borderBottom: i < resumes.length - 1 ? '1px solid #111' : 'none',
+                      background: '#080808',
+                    }}
                   >
-                    Analyze →
-                  </motion.button>
-                </motion.div>
-              ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ color: '#444', fontFamily: 'monospace', fontSize: '12px' }}>DOC</span>
+                      <div>
+                        <p style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{resume.file_name}</p>
+                        <p style={{ color: '#6b7280', fontSize: '12px' }}>{new Date(resume.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ background: '#3B82F6', color: 'white', borderColor: 'transparent' }}
+                      onClick={() => navigate(`/analyze/${resume.id}`)}
+                      style={{ padding: '8px 20px', background: 'transparent', border: '1px solid #222', borderRadius: '6px', color: '#9ca3af', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                      Analyze →
+                    </motion.button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </motion.div>

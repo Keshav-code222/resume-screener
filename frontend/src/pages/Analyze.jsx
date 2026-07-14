@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
@@ -68,60 +68,103 @@ export default function Analyze() {
       <main style={{ flex: 1, padding: '48px', display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '100%', maxWidth: '720px' }}>
           {!analysis ? (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-              <h1 style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-1px', color: 'white', marginBottom: '8px' }}>
-                Analyze Resume Match
-              </h1>
-              <p style={{ color: '#6b7280', fontSize: '15px', marginBottom: '40px' }}>
-                Paste the job description below to see how well your resume matches and get AI recommendations.
-              </p>
-
-              {error && (
+            <AnimatePresence mode="wait">
+              {loading ? (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '12px 16px', color: '#f87171', fontSize: '14px', marginBottom: '24px' }}
+                  key="scanning"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.05 }}
+                  transition={{ duration: 0.4 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', minHeight: '400px' }}
                 >
-                  {error}
+                  <div style={{ position: 'relative', width: '120px', height: '160px', background: '#0d0d0d', border: '2px solid #1a1a1a', borderRadius: '12px', overflow: 'hidden', marginBottom: '32px' }}>
+                    {/* Document Lines */}
+                    <div style={{ position: 'absolute', top: '24px', left: '20px', width: '60%', height: '4px', background: '#222', borderRadius: '2px' }} />
+                    <div style={{ position: 'absolute', top: '40px', left: '20px', width: '80%', height: '4px', background: '#222', borderRadius: '2px' }} />
+                    <div style={{ position: 'absolute', top: '56px', left: '20px', width: '70%', height: '4px', background: '#222', borderRadius: '2px' }} />
+                    <div style={{ position: 'absolute', top: '72px', left: '20px', width: '85%', height: '4px', background: '#222', borderRadius: '2px' }} />
+                    <div style={{ position: 'absolute', top: '88px', left: '20px', width: '50%', height: '4px', background: '#222', borderRadius: '2px' }} />
+                    
+                    {/* Laser Scanner */}
+                    <motion.div
+                      animate={{ top: ['0%', '100%', '0%'] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                      style={{ position: 'absolute', left: 0, right: 0, height: '2px', background: '#3B82F6', boxShadow: '0 0 16px 4px rgba(59, 130, 246, 0.4)' }}
+                    />
+                  </div>
+                  <motion.h2
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    style={{ color: 'white', fontSize: '20px', fontWeight: '700', letterSpacing: '-0.5px', marginBottom: '8px' }}
+                  >
+                    Analyzing with AI
+                  </motion.h2>
+                  <p style={{ color: '#6b7280', fontSize: '14px' }}>Extracting keywords, scoring skills, and mapping gaps...</p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="form"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <h1 style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-1px', color: 'white', marginBottom: '8px' }}>
+                    Analyze Resume Match
+                  </h1>
+                  <p style={{ color: '#6b7280', fontSize: '15px', marginBottom: '40px' }}>
+                    Paste the job description below to see how well your resume matches and get AI recommendations.
+                  </p>
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '12px 16px', color: '#f87171', fontSize: '14px', marginBottom: '24px' }}
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+
+                  <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Job Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Senior Full Stack Engineer"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        disabled={loading}
+                        style={{ width: '100%', padding: '14px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Job Description</label>
+                      <textarea
+                        placeholder="Paste the complete job description here..."
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        disabled={loading}
+                        rows="10"
+                        style={{ width: '100%', padding: '14px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                      />
+                    </div>
+
+                    <motion.button
+                      whileHover={!loading ? { background: '#f0f0f0' } : {}}
+                      whileTap={!loading ? { scale: 0.98 } : {}}
+                      type="submit"
+                      disabled={loading}
+                      style={{ width: '100%', padding: '16px', background: 'white', border: 'none', borderRadius: '8px', color: 'black', fontSize: '15px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: '8px' }}
+                    >
+                      Scan Resume Match →
+                    </motion.button>
+                  </form>
                 </motion.div>
               )}
-
-              <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Job Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Senior Full Stack Engineer"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    disabled={loading}
-                    style={{ width: '100%', padding: '14px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Job Description</label>
-                  <textarea
-                    placeholder="Paste the complete job description here..."
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    disabled={loading}
-                    rows="10"
-                    style={{ width: '100%', padding: '14px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
-                  />
-                </div>
-
-                <motion.button
-                  whileHover={!loading ? { background: '#f0f0f0' } : {}}
-                  whileTap={!loading ? { scale: 0.98 } : {}}
-                  type="submit"
-                  disabled={loading}
-                  style={{ width: '100%', padding: '16px', background: 'white', border: 'none', borderRadius: '8px', color: 'black', fontSize: '15px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginTop: '8px' }}
-                >
-                  {loading ? 'Analyzing with AI...' : 'Scan Resume Match →'}
-                </motion.button>
-              </form>
-            </motion.div>
+            </AnimatePresence>
           ) : (
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Score Card (Matched with Landing page theme) */}

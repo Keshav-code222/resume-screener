@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
@@ -63,12 +63,12 @@ export default function Login() {
             <p style={{ color: '#444', fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>
               {isSignup ? 'Create account' : 'Welcome back'}
             </p>
-            <h1 style={{ fontSize: '36px', fontWeight: '800', letterSpacing: '-1px', color: 'white', marginBottom: '8px' }}>
+            <motion.h1 layout style={{ fontSize: '36px', fontWeight: '800', letterSpacing: '-1px', color: 'white', marginBottom: '8px' }}>
               {isSignup ? 'Start navigating\nyour career.' : 'Sign in to\nResuMap.'}
-            </h1>
-            <p style={{ color: '#6b7280', fontSize: '15px', marginBottom: '40px' }}>
+            </motion.h1>
+            <motion.p layout style={{ color: '#6b7280', fontSize: '15px', marginBottom: '40px' }}>
               {isSignup ? 'Free to start. No credit card required.' : 'Your career dashboard awaits.'}
-            </p>
+            </motion.p>
 
             {error && (
               <motion.div
@@ -80,20 +80,29 @@ export default function Login() {
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {isSignup && (
-                <div>
-                  <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Full Name</label>
-                  <input
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              )}
-              <div>
+            <motion.form layout onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <AnimatePresence mode="popLayout">
+                {isSignup && (
+                  <motion.div
+                    key="fullName"
+                    initial={{ opacity: 0, height: 0, y: -10 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Full Name</label>
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <motion.div layout>
                 <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Email</label>
                 <input
                   type="email"
@@ -102,8 +111,8 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
                 />
-              </div>
-              <div>
+              </motion.div>
+              <motion.div layout>
                 <label style={{ color: '#6b7280', fontSize: '13px', display: 'block', marginBottom: '8px' }}>Password</label>
                 <input
                   type="password"
@@ -112,9 +121,10 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   style={{ width: '100%', padding: '12px 16px', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', color: 'white', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
                 />
-              </div>
+              </motion.div>
 
               <motion.button
+                layout
                 whileHover={{ background: '#f0f0f0' }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
@@ -123,7 +133,7 @@ export default function Login() {
               >
                 {loading ? 'Please wait...' : isSignup ? 'Create account →' : 'Sign in →'}
               </motion.button>
-            </form>
+            </motion.form>
 
             <p style={{ color: '#444', fontSize: '14px', marginTop: '24px', textAlign: 'center' }}>
               {isSignup ? 'Already have an account? ' : "Don't have an account? "}

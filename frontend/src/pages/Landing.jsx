@@ -150,28 +150,40 @@ export default function Landing() {
       </motion.nav>
 
       {/* Hero */}
-      <section style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 48px', paddingTop: '80px' }}>
-        <motion.div style={{ opacity }}>
+      <section style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 48px', paddingTop: '80px', overflow: 'hidden' }}>
+        <motion.div style={{ opacity, y: useTransform(scrollY, [0, 500], [0, 100]) }}>
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.15 } }
+            }}
             style={{ maxWidth: '820px' }}
           >
-            <p style={{ color: '#6b7280', fontSize: '13px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '32px' }}>
+            <motion.p
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              style={{ color: '#6b7280', fontSize: '13px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '32px' }}
+            >
               AI-Powered Career Navigation
-            </p>
+            </motion.p>
 
-            <h1 style={{ fontSize: 'clamp(48px, 7vw, 96px)', fontWeight: '800', lineHeight: '1.0', letterSpacing: '-3px', marginBottom: '32px', color: 'white' }}>
+            <motion.h1
+              variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } }}
+              style={{ fontSize: 'clamp(48px, 7vw, 96px)', fontWeight: '800', lineHeight: '1.0', letterSpacing: '-3px', marginBottom: '32px', color: 'white' }}
+            >
               The AI that gets<br />
               <span style={{ color: '#3B82F6' }}>you hired.</span>
-            </h1>
+            </motion.h1>
 
-            <p style={{ fontSize: '18px', color: '#6b7280', maxWidth: '520px', lineHeight: '1.7', marginBottom: '48px' }}>
+            <motion.p
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              style={{ fontSize: '18px', color: '#6b7280', maxWidth: '520px', lineHeight: '1.7', marginBottom: '48px' }}
+            >
               ResuMap analyzes your resume, maps skill gaps, and gives you a precise roadmap to your next role. Built for the most competitive job market in years.
-            </p>
+            </motion.p>
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <motion.button
                 whileHover={{ scale: 1.02, background: '#f0f0f0' }}
                 whileTap={{ scale: 0.98 }}
@@ -181,7 +193,7 @@ export default function Landing() {
                 Start free →
               </motion.button>
               <span style={{ color: '#333', fontSize: '13px' }}>No credit card required</span>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </section>
@@ -286,9 +298,9 @@ export default function Landing() {
                 </div>
                 <div style={{ height: '1px', background: '#111', margin: '32px 0' }} />
                 {tier.features.map((f, j) => (
-                  <div key={j} style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px 0', color: '#9ca3af', fontSize: '14px' }}>
+                  <motion.div key={j} whileHover={{ x: 5 }} style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px 0', color: '#9ca3af', fontSize: '14px' }}>
                     <span style={{ color: '#3B82F6', fontSize: '16px' }}>—</span> {f}
-                  </div>
+                  </motion.div>
                 ))}
                 <motion.button
                   whileHover={{ scale: 1.02, background: tier.highlight ? '#2563eb' : '#1a1a1a' }}
