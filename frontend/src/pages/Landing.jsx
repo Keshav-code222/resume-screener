@@ -1,8 +1,29 @@
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+// Landing — 6 chapters of a Son Daven-style monograph.
+// Prolog → About → Method → Results → Trust → Begin.
 
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useRef, useState } from 'react';
+import SiteNav from '../components/chrome/SiteNav';
+import ChapterNav from '../components/chrome/ChapterNav';
+import Footer from '../components/chrome/Footer';
+import ChapterSection from '../components/editorial/ChapterSection';
+import SerifHeadline from '../components/editorial/SerifHeadline';
+import ItalicByline from '../components/editorial/ItalicByline';
+import SignaturePhrase from '../components/editorial/SignaturePhrase';
+import GoldDivider from '../components/editorial/GoldDivider';
+import FilledButton from '../components/ui/FilledButton';
+import GhostButton from '../components/ui/GhostButton';
+import Counter from '../components/ui/Counter';
+import MarqeeRow from '../components/ui/MarqeeRow';
+import FullBleedImage from '../components/ui/FullBleedImage';
+import Logo from '../components/ui/Logo';
+import FadeUp from '../components/motion/FadeUp';
+import StaggerChildren from '../components/motion/StaggerChildren';
+import { useScrollSpy } from '../hooks/useScrollSpy';
+import { chapterIds, chapters } from '../lib/chapters';
+
+// --- Background ambience: faint monospace "signals" drifting through the page
 const floatingItems = [
   'MATCH 94', 'Python · Flask', 'offer received', 'Senior Engineer · Google',
   'MATCH 78', 'React · TypeScript', 'interview scheduled', 'Backend Dev · Stripe',
@@ -14,20 +35,29 @@ const floatingItems = [
 
 function FloatingBg() {
   return (
-    <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      {floatingItems.map((item, i) => (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    >
+      {floatingItems.slice(0, 12).map((item, i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 0.18, 0.18, 0] }}
-          transition={{ duration: 8, delay: i * 1.1, repeat: Infinity, repeatDelay: 4 }}
+          transition={{ duration: 12, delay: i * 1.6, repeat: Infinity, repeatDelay: 6 }}
           style={{
             position: 'absolute',
             left: `${(i * 17 + 5) % 90}%`,
             top: `${(i * 13 + 8) % 85}%`,
-            color: '#ffffff',
-            fontSize: '13px',
-            fontFamily: 'monospace',
+            color: '#C9A961',
+            fontSize: 12,
+            fontFamily: '"JetBrains Mono", monospace',
             whiteSpace: 'nowrap',
             letterSpacing: '0.05em',
           }}
@@ -39,328 +69,755 @@ function FloatingBg() {
   );
 }
 
-function NavLink({ children }) {
-  return (
-    <motion.a
-      whileHover={{ color: '#ffffff' }}
-      style={{ color: '#6b7280', fontSize: '14px', fontWeight: '500', cursor: 'pointer', textDecoration: 'none', transition: 'color 0.2s' }}
-    >
-      {children}
-    </motion.a>
-  );
-}
-
-function FeatureRow({ number, title, desc, delay }) {
-  const [ref, inView] = useInView({ triggerOnce: true });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 24 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '60px 1fr 2fr',
-        gap: '32px',
-        padding: '32px 0',
-        borderBottom: '1px solid #1a1a1a',
-        alignItems: 'start',
-      }}
-    >
-      <span style={{ color: '#333', fontSize: '13px', fontFamily: 'monospace', paddingTop: '4px' }}>{number}</span>
-      <span style={{ color: '#ffffff', fontSize: '16px', fontWeight: '600' }}>{title}</span>
-      <span style={{ color: '#6b7280', fontSize: '15px', lineHeight: '1.6' }}>{desc}</span>
-    </motion.div>
-  );
-}
-
-function Counter({ target, suffix = '' }) {
-  const [count, setCount] = useState(0);
-  const [ref, inView] = useInView({ triggerOnce: true });
-
-  useEffect(() => {
-    if (!inView) return;
-    let start = 0;
-    const step = Math.ceil(target / 60);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= target) { setCount(target); clearInterval(timer); }
-      else setCount(start);
-    }, 20);
-    return () => clearInterval(timer);
-  }, [inView, target]);
-
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
-}
-
-export default function Landing() {
+// --- Hero scroll-fade
+function HeroProlog() {
   const navigate = useNavigate();
-  const { scrollY } = useScroll();
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.25]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
   return (
-    <div style={{ background: '#080808', minHeight: '100vh', color: 'white', fontFamily: "'Inter', -apple-system, sans-serif" }}>
-      <FloatingBg />
-
-      {/* Navbar */}
-      <motion.nav
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+    <FullBleedImage variant="hero" style={{ minHeight: '100vh' }}>
+      <motion.div
+        ref={ref}
         style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '20px 48px',
-          background: 'rgba(8,8,8,0.85)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #111',
+          position: 'relative',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          padding: 'clamp(7rem, 14vh, 10rem) clamp(1.25rem, 4vw, 4rem) clamp(4rem, 8vh, 6rem)',
+          opacity: heroOpacity,
+          y: heroY,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '28px', height: '28px', background: 'white', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'black', fontWeight: '900', fontSize: '14px' }}>R</span>
-          </div>
-          <span style={{ fontWeight: '700', fontSize: '16px', letterSpacing: '-0.3px' }}>resumap.</span>
-        </div>
-
-        <div style={{ display: 'flex', gap: '36px' }}>
-          <NavLink>Resume Score</NavLink>
-          <NavLink>Roadmaps</NavLink>
-          <NavLink>Interview Prep</NavLink>
-          <NavLink>Pricing</NavLink>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <motion.button
-            whileHover={{ color: '#fff' }}
-            onClick={() => navigate('/login')}
-            style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}
-          >
-            Sign in
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02, background: '#f0f0f0' }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/login')}
-            style={{ background: 'white', border: 'none', borderRadius: '100px', color: 'black', fontSize: '14px', fontWeight: '600', padding: '10px 20px', cursor: 'pointer' }}
-          >
-            Start free →
-          </motion.button>
-        </div>
-      </motion.nav>
-
-      {/* Hero */}
-      <section style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 48px', paddingTop: '80px', overflow: 'hidden' }}>
-        <motion.div style={{ opacity, y: useTransform(scrollY, [0, 500], [0, 100]) }}>
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: {},
-              visible: { transition: { staggerChildren: 0.15 } }
+        <FadeUp>
+          <span
+            style={{
+              fontFamily: '"Inter", system-ui, sans-serif',
+              fontSize: 11,
+              fontWeight: 500,
+              color: '#C9A961',
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+              marginBottom: 32,
+              display: 'inline-block',
             }}
-            style={{ maxWidth: '820px' }}
           >
-            <motion.p
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-              style={{ color: '#6b7280', fontSize: '13px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '32px' }}
-            >
-              AI-Powered Career Navigation
-            </motion.p>
+            Chapter 00 — Prolog
+          </span>
+        </FadeUp>
 
-            <motion.h1
-              variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } }}
-              style={{ fontSize: 'clamp(48px, 7vw, 96px)', fontWeight: '800', lineHeight: '1.0', letterSpacing: '-3px', marginBottom: '32px', color: 'white' }}
-            >
-              The AI that gets<br />
-              <span style={{ color: '#3B82F6' }}>you hired.</span>
-            </motion.h1>
+        <SerifHeadline
+          lines={['The AI that', 'reads you.']}
+          size="xl"
+          stagger={0.18}
+          trigger="mount"
+          style={{ textAlign: 'center', maxWidth: 900 }}
+        />
 
-            <motion.p
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-              style={{ fontSize: '18px', color: '#6b7280', maxWidth: '520px', lineHeight: '1.7', marginBottom: '48px' }}
-            >
-              ResuMap analyzes your resume, maps skill gaps, and gives you a precise roadmap to your next role. Built for the most competitive job market in years.
-            </motion.p>
+        <FadeUp delay={0.6}>
+          <p
+            style={{
+              fontFamily: '"Cormorant Garamond", Georgia, serif',
+              fontStyle: 'italic',
+              fontWeight: 300,
+              fontSize: 'clamp(1.05rem, 1.6vw, 1.4rem)',
+              color: '#7A7268',
+              maxWidth: 560,
+              margin: '36px auto 0',
+              lineHeight: 1.5,
+            }}
+          >
+            <span style={{ color: '#F2E9D8' }}>by ResuMap</span> — a precise reading of your resume, mapped against the role you want.
+          </p>
+        </FadeUp>
 
-            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <motion.button
-                whileHover={{ scale: 1.02, background: '#f0f0f0' }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/login')}
-                style={{ background: 'white', border: 'none', borderRadius: '100px', color: 'black', fontSize: '16px', fontWeight: '700', padding: '14px 32px', cursor: 'pointer' }}
-              >
-                Start free →
-              </motion.button>
-              <span style={{ color: '#333', fontSize: '13px' }}>No credit card required</span>
-            </motion.div>
-          </motion.div>
+        <FadeUp delay={0.85}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 16,
+              marginTop: 56,
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
+            <FilledButton onClick={() => navigate('/login')}>
+              Begin
+            </FilledButton>
+            <GhostButton onClick={() => {
+              document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+            }}>
+              Tour the chapters
+            </GhostButton>
+          </div>
+        </FadeUp>
+
+        {/* Scroll cue */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.4, duration: 0.8 }}
+          style={{
+            position: 'absolute',
+            bottom: 36,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: '"Inter", system-ui, sans-serif',
+              fontSize: 9,
+              fontWeight: 500,
+              color: '#5C5550',
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+            }}
+          >
+            scroll
+          </span>
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              width: 1,
+              height: 24,
+              background: 'linear-gradient(to bottom, #C9A961 0%, transparent 100%)',
+            }}
+          />
         </motion.div>
-      </section>
+      </motion.div>
+    </FullBleedImage>
+  );
+}
 
-      {/* Stats */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 48px', borderTop: '1px solid #111' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0', maxWidth: '700px' }}>
-          {[
-            { value: 10000, suffix: '+', label: 'Resumes analyzed' },
-            { value: 98, suffix: '%', label: 'AI accuracy rate' },
-            { value: 30, suffix: 's', label: 'Time to results' },
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              style={{ padding: '0 32px 0 0' }}
+// --- Chapter 01: About
+function AboutChapter() {
+  return (
+    <ChapterSection id="about" index="01" label="About" bg="ink-950">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+          gap: 'clamp(2rem, 6vw, 5rem)',
+          alignItems: 'start',
+        }}
+      >
+        <div>
+          <SerifHeadline
+            lines={['Most resumes', 'are never read.']}
+            size="lg"
+          />
+          <FadeUp delay={0.3}>
+            <GoldDivider mode="rule-diamond" style={{ marginTop: 32 }} />
+          </FadeUp>
+        </div>
+
+        <StaggerChildren style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <FadeUp>
+            <p
+              style={{
+                fontFamily: '"Inter", system-ui, sans-serif',
+                fontSize: 16,
+                color: '#F2E9D8',
+                lineHeight: 1.7,
+                margin: 0,
+              }}
             >
-              <div style={{ fontSize: '40px', fontWeight: '800', letterSpacing: '-1px', color: 'white' }}>
-                <Counter target={stat.value} suffix={stat.suffix} />
-              </div>
-              <div style={{ color: '#444', fontSize: '14px', marginTop: '4px' }}>{stat.label}</div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 48px', borderTop: '1px solid #111' }}>
-        <div style={{ maxWidth: '900px' }}>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            style={{ color: '#333', fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '48px' }}
-          >
-            What ResuMap does
-          </motion.p>
-
-          <FeatureRow number="01" title="Resume Analysis" desc="Upload your resume. Get a match score, a list of missing keywords, and exact edits to make — all in under 30 seconds." delay={0} />
-          <FeatureRow number="02" title="Skill Gap Mapping" desc="Paste any job description. See exactly which skills you have, which you're missing, and how far you are from a perfect match." delay={0.1} />
-          <FeatureRow number="03" title="Career Roadmap" desc="Tell us your target role. Get a step-by-step learning path with free resources, projects, and certifications to get there." delay={0.2} />
-          <FeatureRow number="04" title="Interview Prep" desc="Practice with real interview questions for your target role. Get AI feedback on your answers instantly. Coming soon." delay={0.3} />
-          <FeatureRow number="05" title="Auto Apply" desc="Set your preferences. ResuMap automatically applies to matching jobs with your tailored resume. Premium feature." delay={0.4} />
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 48px', borderTop: '1px solid #111' }}>
-        <div style={{ maxWidth: '900px' }}>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            style={{ color: '#333', fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '48px' }}
-          >
-            Pricing
-          </motion.p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: '#111' }}>
-            {[
-              {
-                plan: 'Free',
-                price: '$0',
-                sub: 'forever',
-                features: ['5 resume analyses / month', 'Job match scoring', 'Skill gap analysis', 'Improvement suggestions'],
-                cta: 'Get started',
-                highlight: false,
-              },
-              {
-                plan: 'Pro',
-                price: '$9.99',
-                sub: 'per month',
-                features: ['Unlimited analyses', 'Career roadmaps', 'Interview prep (soon)', 'Auto-apply to jobs (soon)', 'Priority support'],
-                cta: 'Start free trial →',
-                highlight: true,
-              },
-            ].map((tier, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+              The average job posting draws <span style={{ color: '#C9A961' }}>250 applications</span>.
+              The average recruiter spends <span style={{ color: '#C9A961' }}>seven seconds</span> on yours.
+              Most never make it past the first filter.
+            </p>
+          </FadeUp>
+          <FadeUp>
+            <p
+              style={{
+                fontFamily: '"Inter", system-ui, sans-serif',
+                fontSize: 16,
+                color: '#7A7268',
+                lineHeight: 1.7,
+                margin: 0,
+              }}
+            >
+              ResuMap reads what they read. It scores the match, names the gaps, and tells you, in plain
+              prose, what to add before you send.
+            </p>
+          </FadeUp>
+          <FadeUp>
+            <p
+              style={{
+                fontFamily: '"Cormorant Garamond", Georgia, serif',
+                fontStyle: 'italic',
+                fontWeight: 300,
+                fontSize: 17,
+                color: '#F2E9D8',
+                lineHeight: 1.6,
+                margin: 0,
+                paddingLeft: 16,
+                borderLeft: '1px solid rgba(201, 169, 97, 0.4)',
+              }}
+            >
+              Not a spell-check. A second pair of eyes, calibrated to the role.
+            </p>
+          </FadeUp>
+          <FadeUp>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 16 }}>
+              <Counter end={750000000} duration={2.4} size={48} />
+              <span
                 style={{
-                  background: tier.highlight ? '#0d0d0d' : '#080808',
-                  padding: '48px',
-                  position: 'relative',
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  fontSize: 12,
+                  color: '#7A7268',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  maxWidth: 200,
+                  lineHeight: 1.4,
                 }}
               >
-                {tier.highlight && (
-                  <div style={{ position: 'absolute', top: '24px', right: '24px', background: '#3B82F6', color: 'white', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '100px', letterSpacing: '0.05em' }}>
-                    POPULAR
-                  </div>
-                )}
-                <div style={{ color: '#6b7280', fontSize: '13px', fontWeight: '500', marginBottom: '16px' }}>{tier.plan}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '48px', fontWeight: '800', letterSpacing: '-2px', color: 'white' }}>{tier.price}</span>
-                  <span style={{ color: '#444', fontSize: '14px' }}>{tier.sub}</span>
-                </div>
-                <div style={{ height: '1px', background: '#111', margin: '32px 0' }} />
-                {tier.features.map((f, j) => (
-                  <motion.div key={j} whileHover={{ x: 5 }} style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '8px 0', color: '#9ca3af', fontSize: '14px' }}>
-                    <span style={{ color: '#3B82F6', fontSize: '16px' }}>—</span> {f}
-                  </motion.div>
-                ))}
-                <motion.button
-                  whileHover={{ scale: 1.02, background: tier.highlight ? '#2563eb' : '#1a1a1a' }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate('/login')}
+                resumes lost to filters each year
+              </span>
+            </div>
+          </FadeUp>
+        </StaggerChildren>
+      </div>
+    </ChapterSection>
+  );
+}
+
+// --- Chapter 02: Method
+const methodSteps = [
+  {
+    n: '01',
+    title: 'Upload your manuscript.',
+    body: 'A PDF or DOCX. We parse it into a structured profile of your skills, your history, the shape of your career so far.',
+  },
+  {
+    n: '02',
+    title: 'Paste the role.',
+    body: 'The job description, in full. We score your match against it — keyword overlap, seniority fit, and the soft signals between the lines.',
+  },
+  {
+    n: '03',
+    title: 'Read the chapter.',
+    body: 'A precise score, the skills you are missing, and three concrete recommendations written in your voice, not a template.',
+  },
+];
+
+function MethodChapter() {
+  return (
+    <ChapterSection id="method" index="02" label="Method" bg="ink-900">
+      <SerifHeadline lines={['Three readings.']} size="lg" />
+      <FadeUp delay={0.3}>
+        <p
+          style={{
+            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontStyle: 'italic',
+            fontWeight: 300,
+            fontSize: 18,
+            color: '#7A7268',
+            marginTop: 16,
+            maxWidth: 560,
+            lineHeight: 1.5,
+          }}
+        >
+          How a single pass becomes a precise roadmap.
+        </p>
+      </FadeUp>
+
+      <div style={{ marginTop: 'clamp(3rem, 8vh, 6rem)' }}>
+        {methodSteps.map((step, i) => (
+          <FadeUp key={step.n} delay={i * 0.1}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '120px 1fr 2fr',
+                gap: 'clamp(1.5rem, 4vw, 3rem)',
+                padding: 'clamp(1.5rem, 4vh, 3rem) 0',
+                borderBottom: i < methodSteps.length - 1 ? '1px solid #26221B' : 'none',
+                alignItems: 'start',
+              }}
+              className="method-row"
+            >
+              <span
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: '#C9A961',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                {step.n}
+              </span>
+              <h3
+                style={{
+                  fontFamily: '"Cormorant Garamond", Georgia, serif',
+                  fontSize: 'clamp(1.4rem, 2.4vw, 2rem)',
+                  fontWeight: 500,
+                  color: '#F8F2E4',
+                  margin: 0,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {step.title}
+              </h3>
+              <p
+                style={{
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  fontSize: 15,
+                  color: '#7A7268',
+                  lineHeight: 1.65,
+                  margin: 0,
+                }}
+              >
+                {step.body}
+              </p>
+            </div>
+          </FadeUp>
+        ))}
+      </div>
+    </ChapterSection>
+  );
+}
+
+// --- MarqeeRow between 02 and 03
+function Interlude() {
+  return (
+    <div
+      style={{
+        background: '#0A0907',
+        borderTop: '1px solid #26221B',
+        borderBottom: '1px solid #26221B',
+        padding: '32px 0',
+      }}
+    >
+      <MarqeeRow
+        text="ResuMap"
+        repeat={6}
+        duration={40}
+        separator="·"
+        opacity={0.5}
+        size={14}
+      />
+    </div>
+  );
+}
+
+// --- Chapter 03: Results (Dashboard preview card)
+function ResultsChapter() {
+  const [pressed, setPressed] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <ChapterSection id="results" index="03" label="Results" bg="ink-950">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+          gap: 'clamp(2rem, 6vw, 5rem)',
+          alignItems: 'center',
+        }}
+      >
+        <div>
+          <SerifHeadline lines={['A precise', 'reading.']} size="lg" />
+          <FadeUp delay={0.3}>
+            <p
+              style={{
+                fontFamily: '"Inter", system-ui, sans-serif',
+                fontSize: 16,
+                color: '#7A7268',
+                marginTop: 24,
+                lineHeight: 1.7,
+                maxWidth: 420,
+              }}
+            >
+              The dashboard gives you a single number — your match — and the
+              path to improve it. No dashboards-for-dashboards-sake.
+            </p>
+          </FadeUp>
+          <FadeUp delay={0.5}>
+            <div style={{ marginTop: 32, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <GhostButton onClick={() => navigate('/login')}>
+                Try a reading
+              </GhostButton>
+            </div>
+          </FadeUp>
+        </div>
+
+        {/* Dashboard preview card */}
+        <FadeUp delay={0.3} y={32}>
+          <div
+            onMouseDown={() => setPressed(true)}
+            onMouseUp={() => setPressed(false)}
+            onMouseLeave={() => setPressed(false)}
+            onTouchStart={() => setPressed(true)}
+            onTouchEnd={() => setPressed(false)}
+            style={{
+              position: 'relative',
+              border: '1px solid #26221B',
+              background: '#0F0D0A',
+              padding: 'clamp(1.5rem, 3vw, 2.5rem)',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 24,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  fontSize: 10,
+                  color: '#C9A961',
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Resume Match Score
+              </span>
+              <span
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: 10,
+                  color: '#5C5550',
+                }}
+              >
+                preview
+              </span>
+            </div>
+
+            <div
+              style={{
+                fontFamily: '"Inter", system-ui, sans-serif',
+                fontSize: 11,
+                color: '#7A7268',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                marginBottom: 12,
+              }}
+            >
+              Senior Engineer · Google
+            </div>
+
+            <div
+              style={{
+                fontFamily: '"Cormorant Garamond", Georgia, serif',
+                fontSize: 'clamp(4.5rem, 9vw, 7rem)',
+                fontWeight: 500,
+                color: '#F8F2E4',
+                lineHeight: 1,
+                letterSpacing: '-0.03em',
+                marginBottom: 24,
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={pressed ? 'after' : 'before'}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ display: 'inline-block' }}
+                >
+                  {pressed ? '94' : '87'}
+                </motion.span>
+              </AnimatePresence>
+              <span style={{ color: '#C9A961' }}>%</span>
+            </div>
+
+            {/* Brass hairline that animates 0 → match% */}
+            <div
+              style={{
+                position: 'relative',
+                height: 1,
+                background: '#26221B',
+                marginBottom: 28,
+              }}
+            >
+              <motion.div
+                initial={{ width: 0 }}
+                whileInView={{ width: pressed ? '94%' : '87%' }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  height: 1,
+                  background: '#C9A961',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              {['Distributed systems', 'Go', 'Kubernetes', 'gRPC'].map((skill, i) => (
+                <motion.div
+                  key={skill}
+                  initial={{ opacity: 0, x: -6 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.6 + i * 0.08, duration: 0.4 }}
                   style={{
-                    width: '100%',
-                    padding: '14px',
-                    marginTop: '32px',
-                    background: tier.highlight ? '#3B82F6' : 'transparent',
-                    border: tier.highlight ? 'none' : '1px solid #222',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontFamily: '"Inter", system-ui, sans-serif',
+                    fontSize: 12,
+                    color: '#F2E9D8',
                   }}
                 >
-                  {tier.cta}
-                </motion.button>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+                  <span style={{ color: '#C9A961' }}>✓</span>
+                  {skill}
+                </motion.div>
+              ))}
+            </div>
 
-      {/* CTA */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '120px 48px', borderTop: '1px solid #111' }}>
-        <motion.div
-          initial={{ opacity: 0, y: 32 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <h2 style={{ fontSize: 'clamp(40px, 5vw, 72px)', fontWeight: '800', letterSpacing: '-2px', marginBottom: '24px', lineHeight: '1.1' }}>
-            Your next job starts<br />with one upload.
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: '18px', marginBottom: '48px' }}>
-            Free to start. Takes 30 seconds.
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.02, background: '#f0f0f0' }}
-            whileTap={{ scale: 0.98 }}
+            <div
+              style={{
+                marginTop: 28,
+                paddingTop: 20,
+                borderTop: '1px solid #26221B',
+                fontFamily: '"Cormorant Garamond", Georgia, serif',
+                fontStyle: 'italic',
+                fontWeight: 300,
+                fontSize: 12,
+                color: '#5C5550',
+                textAlign: 'center',
+                letterSpacing: '0.04em',
+              }}
+            >
+              hold to compare — before and after
+            </div>
+          </div>
+        </FadeUp>
+      </div>
+    </ChapterSection>
+  );
+}
+
+// --- Chapter 04: Trust (testimonials + counters)
+const testimonials = [
+  {
+    quote: 'It told me to add a single line about cost optimization. I got the interview within the week.',
+    author: 'Eliza M.',
+    role: 'Senior Backend, Stripe',
+  },
+  {
+    quote: 'I have rewritten my resume eight times. ResuMap found two missing keywords in ninety seconds.',
+    author: 'Daniel R.',
+    role: 'Full Stack, Vercel',
+  },
+  {
+    quote: 'The roadmap felt like a real human had read it. It had.',
+    author: 'Priya K.',
+    role: 'ML Engineer, Anthropic',
+  },
+];
+
+function TrustChapter() {
+  return (
+    <ChapterSection id="trust" index="04" label="Trust" bg="ink-900">
+      <SerifHeadline lines={['Voices from', 'the field.']} size="lg" />
+      <FadeUp delay={0.3}>
+        <GoldDivider mode="rule-diamond" style={{ marginTop: 32, justifyContent: 'flex-start' }} />
+      </FadeUp>
+
+      <div
+        style={{
+          marginTop: 'clamp(3rem, 8vh, 5rem)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+          gap: 'clamp(1.5rem, 4vw, 3rem)',
+        }}
+      >
+        {testimonials.map((t, i) => (
+          <FadeUp key={t.author} delay={i * 0.12}>
+            <blockquote
+              style={{
+                margin: 0,
+                padding: 0,
+                borderLeft: '1px solid rgba(201, 169, 97, 0.4)',
+                paddingLeft: 24,
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: '"Cormorant Garamond", Georgia, serif',
+                  fontStyle: 'italic',
+                  fontWeight: 300,
+                  fontSize: 'clamp(1.1rem, 1.8vw, 1.4rem)',
+                  color: '#F2E9D8',
+                  lineHeight: 1.5,
+                  margin: 0,
+                }}
+              >
+                "{t.quote}"
+              </p>
+              <footer
+                style={{
+                  marginTop: 20,
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  fontSize: 12,
+                  color: '#C9A961',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                — {t.author}
+                <span
+                  style={{
+                    display: 'block',
+                    color: '#5C5550',
+                    fontSize: 11,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    marginTop: 4,
+                  }}
+                >
+                  {t.role}
+                </span>
+              </footer>
+            </blockquote>
+          </FadeUp>
+        ))}
+      </div>
+
+      {/* Counters row */}
+      <div
+        style={{
+          marginTop: 'clamp(4rem, 10vh, 7rem)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
+          gap: 'clamp(1.5rem, 4vw, 3rem)',
+          paddingTop: 'clamp(2rem, 5vh, 3rem)',
+          borderTop: '1px solid #26221B',
+        }}
+      >
+        {[
+          { end: 48293, label: 'Resumes read', suffix: '' },
+          { end: 94, label: 'Avg. match lift', suffix: '%' },
+          { end: 72, label: 'Interview rate', suffix: '%' },
+          { end: 4.9, label: 'Candidate rating', suffix: '/5', decimals: 1 },
+        ].map((stat, i) => (
+          <FadeUp key={stat.label} delay={i * 0.1}>
+            <div>
+              <Counter
+                end={stat.end}
+                decimals={stat.decimals || 0}
+                suffix={stat.suffix}
+                size={48}
+                color="cream-50"
+              />
+              <div
+                style={{
+                  marginTop: 8,
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  fontSize: 10,
+                  color: '#7A7268',
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {stat.label}
+              </div>
+            </div>
+          </FadeUp>
+        ))}
+      </div>
+    </ChapterSection>
+  );
+}
+
+// --- Chapter 05: Begin
+function BeginChapter() {
+  const navigate = useNavigate();
+  return (
+    <ChapterSection
+      id="begin"
+      index="05"
+      label="Begin"
+      bg="forest"
+      py="clamp(8rem, 18vh, 14rem)"
+      style={{ borderTop: '1px solid #26221B' }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: 28,
+        }}
+      >
+        <SerifHeadline
+          lines={['Your next chapter', 'starts here.']}
+          size="xl"
+          trigger="whileInView"
+          style={{ textAlign: 'center' }}
+        />
+        <FadeUp delay={0.3}>
+          <ItalicByline color="cream" size={16}>
+            one free reading. no card. no catch.
+          </ItalicByline>
+        </FadeUp>
+        <FadeUp delay={0.55}>
+          <FilledButton
             onClick={() => navigate('/login')}
-            style={{ background: 'white', border: 'none', borderRadius: '100px', color: 'black', fontSize: '16px', fontWeight: '700', padding: '16px 36px', cursor: 'pointer' }}
+            style={{ marginTop: 24 }}
           >
-            Analyze my resume →
-          </motion.button>
-        </motion.div>
-      </section>
+            Begin — it's free
+          </FilledButton>
+        </FadeUp>
+        <SignaturePhrase size={14} color="mute-500">
+          * a monograph on being hired
+        </SignaturePhrase>
+      </div>
+    </ChapterSection>
+  );
+}
 
-      {/* Footer */}
-      <footer style={{ position: 'relative', zIndex: 1, padding: '32px 48px', borderTop: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'black', fontWeight: '900', fontSize: '11px' }}>R</span>
-          </div>
-          <span style={{ fontWeight: '700', fontSize: '14px' }}>resumap.</span>
-        </div>
-        <p style={{ color: '#333', fontSize: '13px' }}>© 2026 ResuMap. All rights reserved.</p>
-      </footer>
+// --- Main
+export default function Landing() {
+  const activeId = useScrollSpy(chapterIds);
+
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <div style={{ background: '#0A0907', position: 'relative' }}>
+      <FloatingBg />
+      <SiteNav transparent />
+      <ChapterNav activeId={activeId} onSelect={scrollTo} />
+
+      <main style={{ position: 'relative', zIndex: 1 }}>
+        {/* Prolog (no ChapterSection wrapper — uses FullBleedImage hero) */}
+        <section id="prolog" style={{ position: 'relative' }}>
+          <HeroProlog />
+        </section>
+
+        <AboutChapter />
+        <MethodChapter />
+        <Interlude />
+        <ResultsChapter />
+        <TrustChapter />
+        <BeginChapter />
+      </main>
+
+      <Footer />
     </div>
   );
 }

@@ -1,15 +1,14 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Analyze from './pages/Analyze';
+import Preloader from './components/chrome/Preloader';
+import { pageVariants } from './lib/variants';
 
-const pageVariants = {
-  initial: { opacity: 0, y: 15 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-  exit: { opacity: 0, y: -15, transition: { duration: 0.3, ease: "easeIn" } }
-};
+const PRELOAD_KEY = 'resumap:preloaded';
 
 function PageWrapper({ children }) {
   return (
@@ -41,10 +40,39 @@ function AnimatedRoutes() {
 }
 
 function App() {
+  // Preloader fires once per session.
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !sessionStorage.getItem(PRELOAD_KEY);
+  });
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setTimeout(() => {
+      sessionStorage.setItem(PRELOAD_KEY, '1');
+      setIsLoading(false);
+    }, 2200);
+    return () => clearTimeout(t);
+  }, [isLoading]);
+
   return (
-    <BrowserRouter>
-      <AnimatedRoutes />
-    </BrowserRouter>
+    <AnimatePresence mode="wait">
+      {isLoading ? (
+        <Preloader key="preloader" />
+      ) : (
+        <motion.div
+          key="app"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          style={{ width: '100%', minHeight: '100vh' }}
+        >
+          <BrowserRouter>
+            <AnimatedRoutes />
+          </BrowserRouter>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
