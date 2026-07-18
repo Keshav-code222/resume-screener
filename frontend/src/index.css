@@ -1,56 +1,6 @@
-/* ==========================================================================
-   ResuMap — Son Daven-style cinematic editorial theme
-   Loaded by main.jsx. Owns the design system: tokens, fonts, base reset.
-   ========================================================================== */
-
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 
-@theme {
-  /* -- Palette: ink (depth), forest (chapter accent), brass (gold), cream (type) ---- */
-  --color-ink-950: #0A0907;
-  --color-ink-900: #0F0D0A;
-  --color-ink-800: #15120E;
-  --color-ink-700: #1F1B14;
-
-  --color-forest-900: #0E1F19;
-  --color-forest-700: #1A3329;
-
-  --color-brass-500: #C9A961;
-  --color-brass-400: #D4B97A;
-  --color-brass-600: #A88A45;
-
-  --color-cream-100: #F2E9D8;
-  --color-cream-50:  #F8F2E4;
-  --color-paper:    #FFFFFF;
-
-  --color-mute-500: #7A7268;
-  --color-mute-400: #5C5550;
-
-  --color-rule:   #26221B;
-  --color-danger: #C97064;
-
-  /* -- Type: editorial serif display, body sans, mono for chapter numbers ------------ */
-  --font-display: "Cormorant Garamond", "Playfair Display", Georgia, serif;
-  --font-serif:   "Cormorant Garamond", "Playfair Display", Georgia, serif;
-  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  /* -- Editorial scale (use as `text-poetic-xl` etc.) ----------------------------- */
-  --text-poetic-xl: clamp(4rem, 9vw, 9rem);
-  --text-poetic-lg: clamp(3rem, 6vw, 5.5rem);
-  --text-poetic-md: clamp(2rem, 4vw, 3rem);
-  --text-body-lg: 1.125rem;
-  --text-body:    1rem;
-  --text-meta:    0.8125rem;
-  --tracking-editorial: 0.18em;
-
-  /* -- Spacing: editorial rhythm ---------------------------------------------------- */
-  --spacing-gutter: clamp(1.25rem, 4vw, 4rem);
-  --spacing-chapter: clamp(6rem, 14vh, 12rem);
-}
-
-/* -- Base reset (replaces deleted App.css) ---------------------------------------- */
 *,
 *::before,
 *::after {
@@ -60,72 +10,36 @@
 }
 
 html {
-  background: var(--color-ink-950);
-  color: var(--color-cream-100);
+  background: #080808;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
 }
 
 body {
-  font-family: var(--font-sans);
-  background: var(--color-ink-950);
-  color: var(--color-cream-100);
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #080808;
+  color: white;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
-  background: var(--color-ink-950);
+  background: #080808;
 }
 
-/* Form elements inherit theme */
-input,
-textarea,
-button,
-select {
+input, textarea, button, select {
   font: inherit;
   color: inherit;
 }
 
-input:focus,
-textarea:focus,
-button:focus,
-select:focus {
-  outline: none;
-}
-
-/* Selection */
 ::selection {
-  background: var(--color-brass-500);
-  color: var(--color-ink-950);
+  background: #3B82F6;
+  color: white;
 }
 
-/* Scrollbar (WebKit) */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-ink-900);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-ink-700);
-  border-radius: 0;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-brass-600);
-}
-
-/* Reduced motion: kill all transitions/animations */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #080808; }
+::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
