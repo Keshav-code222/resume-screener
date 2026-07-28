@@ -1,17 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
-});
-
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { api } from '../lib/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -33,15 +23,20 @@ export default function Login() {
 
     try {
       const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
-      const payload = isSignup ? { email, password, full_name: fullName } : { email, password };
-      const res = await API.post(endpoint, payload);
+      const payload = isSignup
+        ? { email, password, full_name: fullName }
+        : { email, password };
+      const res = await api.post(endpoint, payload);
       localStorage.setItem('token', res.data.access_token);
       navigate('/dashboard');
     } catch (err) {
-      if (err.response?.status === 409) setError('Email already exists. Sign in instead.');
-      else if (err.response?.status === 401) setError('Invalid email or password.');
-      else if (err.message === 'Network Error') setError('Cannot reach server. Is backend running?');
-      else setError(err.response?.data?.error || 'Something went wrong.');
+      const status = err.response?.status;
+      const detail = err.response?.data?.detail;
+      if (status === 409) setError('Email already exists. Sign in instead.');
+      else if (status === 401) setError('Invalid email or password.');
+      else if (err.message === 'Network Error') setError('Cannot reach server. Is the backend running?');
+      else if (Array.isArray(detail)) setError(detail.map((d) => d.msg).join(', '));
+      else setError(detail || err.response?.data?.error || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
