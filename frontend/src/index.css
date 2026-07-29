@@ -10,23 +10,22 @@
 }
 
 html {
-  background: #080808;
+  background: #0A0907;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  scroll-behavior: smooth;
+  /* scroll-behavior removed — we use JS smooth scroll via scrollIntoView */
 }
 
 body {
   font-family: 'Inter', -apple-system, sans-serif;
-  background: #080808;
-  color: white;
+  background: #0A0907;
+  color: #F2E9D8;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
-  background: #080808;
+  background: #0A0907;
 }
 
 input, textarea, button, select {

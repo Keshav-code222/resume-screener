@@ -798,12 +798,12 @@ export default function Landing() {
   };
 
   return (
-    <div style={{ background: '#0A0907', position: 'relative' }}>
+    <div style={{ background: '#0A0907' }}>
       <FloatingBg />
       <SiteNav transparent />
       <ChapterNav activeId={activeId} onSelect={scrollTo} />
 
-      <main style={{ position: 'relative', zIndex: 1 }}>
+      <main>
         {/* Prolog (no ChapterSection wrapper — uses FullBleedImage hero) */}
         <section id="prolog" style={{ position: 'relative' }}>
           <HeroProlog />

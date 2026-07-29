@@ -1,13 +1,13 @@
 // SiteNav — fixed top horizontal nav. Used on every page (slight variations
 // per page; this version is the public/marketing variant used on Landing).
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
 import GhostButton from '../ui/GhostButton';
 import FilledButton from '../ui/FilledButton';
 
-export default function SiteNav({ transparent = false }) {
+export default function SiteNav({ transparent = false, onNavigate }) {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
@@ -18,12 +18,23 @@ export default function SiteNav({ transparent = false }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Solid background instead of backdrop-filter to avoid Chromium compositing
+  // bug where fixed-position backdrop-filter paints black on scroll.
   const navBg = transparent && !scrolled
     ? 'rgba(10, 9, 7, 0)'
-    : 'rgba(10, 9, 7, 0.85)';
+    : '#0F0D0A';
   const navBorder = transparent && !scrolled
     ? 'transparent'
     : 'rgba(38, 34, 27, 0.6)';
+
+  const handleNav = (sectionId) => (e) => {
+    e.preventDefault();
+    if (onNavigate) {
+      onNavigate(sectionId);
+    } else {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <motion.header
@@ -37,8 +48,7 @@ export default function SiteNav({ transparent = false }) {
         right: 0,
         zIndex: 50,
         background: navBg,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        isolation: 'isolate',
         borderBottom: `1px solid ${navBorder}`,
         transition: 'background 0.3s ease, border-color 0.3s ease',
       }}
@@ -62,10 +72,10 @@ export default function SiteNav({ transparent = false }) {
             gap: 32,
           }}
         >
-          <NavItem href="#about">About</NavItem>
-          <NavItem href="#method">Method</NavItem>
-          <NavItem href="#results">Results</NavItem>
-          <NavItem href="#trust">Trust</NavItem>
+          <NavItem href="#about" onClick={handleNav('about')}>About</NavItem>
+          <NavItem href="#method" onClick={handleNav('method')}>Method</NavItem>
+          <NavItem href="#results" onClick={handleNav('results')}>Results</NavItem>
+          <NavItem href="#trust" onClick={handleNav('trust')}>Trust</NavItem>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <GhostButton small onClick={() => navigate('/login')}>
@@ -80,10 +90,11 @@ export default function SiteNav({ transparent = false }) {
   );
 }
 
-function NavItem({ href, children }) {
+function NavItem({ href, onClick, children }) {
   return (
     <a
       href={href}
+      onClick={onClick}
       style={{
         color: '#7A7268',
         fontFamily: '"Inter", system-ui, sans-serif',

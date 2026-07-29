@@ -12,7 +12,7 @@ function PageWrapper({ children }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.3 }}
-      style={{ width: '100%', minHeight: '100vh' }}
+      style={{ width: '100%', minHeight: '100vh', background: '#0A0907' }}
     >
       {children}
     </motion.div>
