@@ -2,29 +2,48 @@
 SQLAlchemy models — mirror schema.sql (UUID PKs, JSON columns, FKs).
 """
 # type: ignore  # Pylance false-positive on Column(_uuid_type(), **kwargs)
+import os
+import uuid
 from sqlalchemy import (
-    Column, String, Text, Boolean, DateTime, ForeignKey, Numeric,  # noqa: F401
+    Column, String, Text, Boolean, DateTime, ForeignKey, Numeric, JSON,  # noqa: F401
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB  # noqa: F401
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID  # noqa: F401
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
 
 
+def _json_type():
+    """
+    JSONB on Postgres, plain JSON on SQLite.
+    SQLAlchemy's generic JSON works on both, but on Postgres it maps to
+    JSON not JSONB — barely matters for our usage. Return JSONB when the
+    database is Postgres (detected via DATABASE_URL).
+    """
+    if os.getenv("DATABASE_URL", "").startswith("postgres"):
+        from sqlalchemy.dialects.postgresql import JSONB  # noqa: F811
+        return JSONB  # type: ignore
+    return JSON
+
+
 def _uuid_type():
     # Postgres UUID in production, fall back to String(36) for SQLite dev.
-    try:
-        return PG_UUID(as_uuid=True)
-    except Exception:  # pragma: no cover
-        return String(36)
+    db_url = os.getenv("DATABASE_URL", "")
+    if db_url.startswith("postgres"):
+        from sqlalchemy.dialects.postgresql import UUID as _PG  # noqa: F811
+        return _PG(as_uuid=True)
+    return String(36)
 
 
 def _uuid_col(**kwargs):
+    # SQLite can't auto-generate UUIDs, so provide a Python-side default.
+    if "default" not in kwargs and "server_default" not in kwargs:
+        kwargs.setdefault("default", lambda: str(uuid.uuid4()))
     return Column(_uuid_type(), **kwargs)
 
 
-def _uuid_fk(*args, **kwargs):
-    return Column(_uuid_type(), ForeignKey(*args), **kwargs)
+def _uuid_fk(column: str, ondelete: str | None = None, **kwargs):
+    return Column(_uuid_type(), ForeignKey(column, ondelete=ondelete), **kwargs)
 
 
 class User(Base):
@@ -83,8 +102,8 @@ class ResumeAnalysis(Base):
     job_title = Column(String(255), nullable=True)
     job_description = Column(Text, nullable=True)
     match_score = Column(Numeric(5, 2), nullable=True)
-    missing_skills = Column(JSONB, nullable=True)
-    recommendations = Column(JSONB, nullable=True)
+    missing_skills = Column(_json_type(), nullable=True)
+    recommendations = Column(_json_type(), nullable=True)
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
 
     resume = relationship("Resume", back_populates="analyses")

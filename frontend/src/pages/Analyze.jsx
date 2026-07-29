@@ -1,17 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
-});
-
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { api } from '../lib/api';
 
 export default function Analyze() {
   const { resumeId } = useParams();
@@ -32,7 +22,7 @@ export default function Analyze() {
     setError('');
 
     try {
-      const res = await API.post('/api/analyses', {
+      const res = await api.post('/api/analyses', {
         resume_id: resumeId,
         job_title: jobTitle,
         job_description: jobDescription,

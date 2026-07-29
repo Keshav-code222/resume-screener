@@ -7,29 +7,33 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
 
-# Imported at module level so the SQLAlchemy Base.metadata registry is
-# populated before any caller calls create_all(). The models themselves
-# import Base from here.
-from . import models  # noqa: F401  (registers tables on Base.metadata)
-
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is not set. Add it to backend/.env (see .env.example)."
-    )
+    # SQLite fallback for local development
+    import pathlib
+    DB_DIR = pathlib.Path(__file__).parent
+    DATABASE_URL = f"sqlite:///{DB_DIR / 'sql_app.db'}"
+    print(f"[database] No DATABASE_URL set — using SQLite: {DATABASE_URL}")
 
 # SQLAlchemy needs postgresql+psycopg2 for the Postgres driver we ship.
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# Import models AFTER Base is defined so they register on Base.metadata.
+import models  # noqa: E402, F401
 
 
 def get_db():
