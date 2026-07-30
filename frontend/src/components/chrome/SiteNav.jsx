@@ -19,12 +19,14 @@ export default function SiteNav({ transparent = false, onNavigate }) {
   }, []);
 
   // Solid background instead of backdrop-filter to avoid Chromium compositing
-  // bug where fixed-position backdrop-filter paints black on scroll.
+  // bug where fixed-position backdrop-filter paints black on scroll. The
+  // "transparent" hero state is also a solid (not rgba(0)) so the page
+  // background never bleeds through during scroll repaint.
   const navBg = transparent && !scrolled
-    ? 'rgba(10, 9, 7, 0)'
+    ? 'rgba(10, 9, 7, 0.55)'
     : '#0F0D0A';
   const navBorder = transparent && !scrolled
-    ? 'transparent'
+    ? 'rgba(38, 34, 27, 0.4)'
     : 'rgba(38, 34, 27, 0.6)';
 
   const handleNav = (sectionId) => (e) => {

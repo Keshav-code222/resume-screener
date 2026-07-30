@@ -33,17 +33,26 @@ export default function FullBleedImage({
         width: '100%',
         minHeight: '100vh',
         background: gradient.bg,
+        // Force a stable compositor layer so the absolutely-positioned
+        // overlays below never flash black when Chromium repaints during
+        // scroll. The 1px translateZ is the cheapest layer-promotion trick.
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+        willChange: 'transform',
+        // Contain paint so the overlays don't repaint the rest of the page.
+        contain: 'layout paint',
+        overflow: 'hidden',
         ...style,
       }}
     >
-      {/* Warm color-grade overlay (mix-blend-mode) */}
+      {/* Warm color-grade overlay — drawn as a flat translucent layer
+          (no mix-blend-mode) to avoid the Chromium black-flash on scroll. */}
       <div
         aria-hidden="true"
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(201, 169, 97, 0.08)',
-          mixBlendMode: 'overlay',
+          background: 'rgba(201, 169, 97, 0.05)',
           pointerEvents: 'none',
         }}
       />
@@ -58,7 +67,8 @@ export default function FullBleedImage({
           pointerEvents: 'none',
         }}
       />
-      {/* SVG film grain */}
+      {/* SVG film grain — also flattened (no mix-blend-mode) to avoid
+          repaint flicker. The grain still reads as texture at 0.08. */}
       {withGrain && (
         <div
           aria-hidden="true"
@@ -67,13 +77,20 @@ export default function FullBleedImage({
             inset: 0,
             backgroundImage:
               "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.79 0 0 0 0 0.66 0 0 0 0 0.38 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
-            opacity: 0.06,
-            mixBlendMode: 'overlay',
+            opacity: 0.08,
             pointerEvents: 'none',
           }}
         />
       )}
-      <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          height: '100%',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+        }}
+      >
         {children}
       </div>
     </div>
