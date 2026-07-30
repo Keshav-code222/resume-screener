@@ -1,92 +1,237 @@
+// Dashboard — app home, styled in the editorial monogram aesthetic.
+// Uses shared design tokens from ../lib/theme.js so it reads as one
+// system alongside Landing, Login, and Analyze.
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
+import { colors, fonts, spacing, theme as t } from '../lib/theme';
+import Logo from '../components/ui/Logo';
+import FilledButton from '../components/ui/FilledButton';
+import GhostButton from '../components/ui/GhostButton';
 
+// ── Sidebar ──────────────────────────────────────────────────────────────
 function Sidebar({ user, active, setActive, navigate }) {
   const links = [
     { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
-    { id: 'resumes', label: 'My Resumes', icon: '◻' },
-    { id: 'history', label: 'History', icon: '◷' },
-    { id: 'analyze', label: 'Analyze', icon: '◈' },
+    { id: 'resumes',   label: 'My Resumes',  icon: '◻' },
+    { id: 'history',   label: 'History',     icon: '◷' },
+    { id: 'analyze',   label: 'Analyze',     icon: '◈' },
   ];
 
   return (
-    <div style={{ width: '220px', background: '#050505', borderRight: '1px solid #111', display: 'flex', flexDirection: 'column', padding: '24px 0', height: '100vh', position: 'fixed', left: 0, top: 0 }}>
-      <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #111' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '26px', height: '26px', background: 'white', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'black', fontWeight: '900', fontSize: '12px' }}>R</span>
-          </div>
-          <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>resumap.</span>
-        </div>
+    <div
+      style={{
+        width: 220,
+        background: colors.card,
+        borderRight: `1px solid ${colors.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px 0',
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+      }}
+    >
+      {/* Logo area */}
+      <div
+        style={{
+          padding: '0 20px 24px',
+          borderBottom: `1px solid ${colors.border}`,
+        }}
+      >
+        <Logo size={28} to="/dashboard" />
       </div>
 
+      {/* Navigation */}
       <nav style={{ flex: 1, padding: '16px 12px' }}>
         {links.map((link) => (
           <motion.button
             key={link.id}
-            whileHover={{ background: '#111' }}
+            whileHover={{ background: colors.elevated }}
             onClick={() => setActive(link.id)}
             style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '10px 12px', background: active === link.id ? '#111' : 'transparent',
-              border: 'none', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px',
-              color: active === link.id ? 'white' : '#6b7280',
-              fontSize: '14px', fontWeight: active === link.id ? '600' : '400',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 12px',
+              background: active === link.id ? colors.elevated : 'transparent',
+              border: 'none',
+              borderRadius: 0,
+              cursor: 'pointer',
+              marginBottom: 4,
+              color: active === link.id ? colors.creamDim : colors.textDim,
+              fontFamily: fonts.sans,
+              fontSize: 12,
+              fontWeight: active === link.id ? 600 : 400,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
               textAlign: 'left',
+              transition: 'color 0.2s, background 0.2s',
             }}
           >
-            <span>{link.icon}</span> {link.label}
+            <span style={{ color: active === link.id ? colors.gold : colors.textDim, fontSize: 14 }}>
+              {link.icon}
+            </span>
+            {link.label}
           </motion.button>
         ))}
       </nav>
 
-      <div style={{ padding: '16px 12px', borderTop: '1px solid #111' }}>
-        <div style={{ padding: '10px 12px', marginBottom: '8px' }}>
-          <p style={{ color: 'white', fontSize: '13px', fontWeight: '600', margin: 0 }}>{user?.full_name || 'User'}</p>
-          <p style={{ color: '#444', fontSize: '12px', margin: '2px 0 0' }}>{user?.email}</p>
+      {/* User area */}
+      <div
+        style={{
+          padding: '16px 12px',
+          borderTop: `1px solid ${colors.border}`,
+        }}
+      >
+        <div style={{ padding: '10px 12px', marginBottom: 8 }}>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: fonts.serif,
+              fontWeight: 500,
+              fontSize: 15,
+              color: colors.cream,
+            }}
+          >
+            {user?.full_name || 'User'}
+          </p>
+          <p style={{ margin: '2px 0 0', ...t.caption }}>
+            {user?.email}
+          </p>
         </div>
         <motion.button
-          whileHover={{ color: '#fff' }}
-          onClick={() => { localStorage.removeItem('token'); navigate('/login'); }}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#444', fontSize: '14px', textAlign: 'left' }}
+          whileHover={{ color: colors.goldLight }}
+          onClick={() => {
+            localStorage.removeItem('token');
+            navigate('/login');
+          }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 12px',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 0,
+            cursor: 'pointer',
+            color: colors.textDim,
+            fontFamily: fonts.sans,
+            fontSize: 12,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            textAlign: 'left',
+          }}
         >
-          ↩ Sign out
+          <span>↩</span> Sign out
         </motion.button>
       </div>
     </div>
   );
 }
 
+// ── Stat Tile (editorial style — serif value, gold eyebrow) ──────────────
 function StatTile({ label, value, delay = 0 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      style={{ background: '#080808', padding: '24px 28px' }}
+      style={{
+        background: colors.card,
+        padding: '24px 28px',
+        borderRight: `1px solid ${colors.border}`,
+      }}
     >
-      <p style={{ color: '#444', fontSize: '12px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px' }}>{label}</p>
-      <p style={{ color: 'white', fontSize: '28px', fontWeight: '800', letterSpacing: '-1px' }}>{value}</p>
+      <p
+        style={{
+          fontFamily: fonts.sans,
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: '0.24em',
+          textTransform: 'uppercase',
+          color: colors.gold,
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontFamily: fonts.serif,
+          fontSize: 32,
+          fontWeight: 500,
+          color: colors.cream,
+          letterSpacing: '-0.02em',
+          margin: 0,
+        }}
+      >
+        {value}
+      </p>
     </motion.div>
   );
 }
 
+// ── Upload Card ──────────────────────────────────────────────────────────
 function UploadCard({ uploading, onUpload }) {
   return (
-    <div style={{ marginBottom: '32px' }}>
-      <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>Upload Resume</p>
-      <label style={{ display: 'block', border: '1px dashed #222', borderRadius: '10px', padding: '40px', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}>
-        <input type="file" accept=".pdf,.docx" onChange={onUpload} disabled={uploading} style={{ display: 'none' }} />
+    <div style={{ marginBottom: 32 }}>
+      <p style={{ ...t.label, marginBottom: 16 }}>Upload Resume</p>
+      <label
+        style={{
+          display: 'block',
+          border: `1px dashed ${colors.border}`,
+          padding: 40,
+          textAlign: 'center',
+          cursor: 'pointer',
+          transition: 'border-color 0.2s, background 0.2s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = colors.goldMuted;
+          e.currentTarget.style.background = colors.goldBg;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = colors.border;
+          e.currentTarget.style.background = 'transparent';
+        }}
+      >
+        <input
+          type="file"
+          accept=".pdf,.docx"
+          onChange={onUpload}
+          disabled={uploading}
+          style={{ display: 'none' }}
+        />
         {uploading ? (
-          <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.2, repeat: Infinity }} style={{ color: '#6b7280', fontSize: '14px' }}>
+          <motion.p
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+            style={{ color: colors.textMuted, fontSize: 14, margin: 0 }}
+          >
             Uploading...
           </motion.p>
         ) : (
           <>
-            <p style={{ color: 'white', fontSize: '15px', fontWeight: '600', marginBottom: '6px' }}>Drop your resume here</p>
-            <p style={{ color: '#444', fontSize: '13px' }}>PDF or DOCX · Max 10MB</p>
+            <p
+              style={{
+                fontFamily: fonts.serif,
+                fontSize: 18,
+                fontWeight: 400,
+                color: colors.cream,
+                marginBottom: 6,
+                margin: 0,
+              }}
+            >
+              Drop your manuscript here
+            </p>
+            <p style={{ ...t.caption, margin: '6px 0 0' }}>
+              PDF or DOCX · Max 10MB
+            </p>
           </>
         )}
       </label>
@@ -94,16 +239,26 @@ function UploadCard({ uploading, onUpload }) {
   );
 }
 
+// ── Resumes List ─────────────────────────────────────────────────────────
 function ResumesList({ resumes, onAnalyze }) {
   if (resumes.length === 0) {
     return (
-      <div style={{ border: '1px solid #111', borderRadius: '10px', padding: '48px', textAlign: 'center' }}>
-        <p style={{ color: '#444', fontSize: '14px' }}>No resumes yet. Upload one above to get started.</p>
+      <div
+        style={{
+          border: `1px solid ${colors.border}`,
+          padding: '48px 32px',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ color: colors.textMuted, fontSize: 14, fontFamily: fonts.sans }}>
+          No resumes yet. Upload one above to get started.
+        </p>
       </div>
     );
   }
+
   return (
-    <div style={{ border: '1px solid #111', borderRadius: '10px', overflow: 'hidden' }}>
+    <div style={{ border: `1px solid ${colors.border}` }}>
       <AnimatePresence>
         {resumes.map((resume, i) => (
           <motion.div
@@ -112,28 +267,53 @@ function ResumesList({ resumes, onAnalyze }) {
             initial={{ opacity: 0, x: -20, height: 0 }}
             animate={{ opacity: 1, x: 0, height: 'auto' }}
             exit={{ opacity: 0, x: 20, height: 0 }}
-            transition={{ opacity: { duration: 0.3 }, layout: { duration: 0.4, type: 'spring', bounce: 0.2 } }}
+            transition={{
+              opacity: { duration: 0.3 },
+              layout: { duration: 0.4, type: 'spring', bounce: 0.2 },
+            }}
             style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               padding: '16px 24px',
-              borderBottom: i < resumes.length - 1 ? '1px solid #111' : 'none',
-              background: '#080808',
+              borderBottom:
+                i < resumes.length - 1 ? `1px solid ${colors.border}` : 'none',
+              background: colors.card,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ color: '#444', fontFamily: 'monospace', fontSize: '12px' }}>DOC</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span
+                style={{
+                  color: colors.gold,
+                  fontFamily: fonts.mono,
+                  fontSize: 11,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                DOC
+              </span>
               <div>
-                <p style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{resume.file_name}</p>
-                <p style={{ color: '#6b7280', fontSize: '12px' }}>{resume.created_at ? new Date(resume.created_at).toLocaleDateString() : '—'}</p>
+                <p
+                  style={{
+                    color: colors.creamDim,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    fontFamily: fonts.sans,
+                    margin: 0,
+                  }}
+                >
+                  {resume.file_name}
+                </p>
+                <p style={{ ...t.caption, margin: '2px 0 0' }}>
+                  {resume.created_at
+                    ? new Date(resume.created_at).toLocaleDateString()
+                    : '—'}
+                </p>
               </div>
             </div>
-            <motion.button
-              whileHover={{ background: '#3B82F6', color: 'white', borderColor: 'transparent' }}
-              onClick={() => onAnalyze(resume.id)}
-              style={{ padding: '8px 20px', background: 'transparent', border: '1px solid #222', borderRadius: '6px', color: '#9ca3af', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
-            >
+            <GhostButton small onClick={() => onAnalyze(resume.id)}>
               Analyze →
-            </motion.button>
+            </GhostButton>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -141,20 +321,28 @@ function ResumesList({ resumes, onAnalyze }) {
   );
 }
 
+// ── History List ─────────────────────────────────────────────────────────
 function HistoryList({ analyses, onView }) {
   if (analyses.length === 0) {
     return (
-      <div style={{ border: '1px solid #111', borderRadius: '10px', padding: '48px', textAlign: 'center' }}>
-        <p style={{ color: '#444', fontSize: '14px' }}>No analyses yet. Pick a resume to scan against a job.</p>
+      <div
+        style={{
+          border: `1px solid ${colors.border}`,
+          padding: '48px 32px',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ color: colors.textMuted, fontSize: 14, fontFamily: fonts.sans }}>
+          No analyses yet. Pick a resume to scan against a job.
+        </p>
       </div>
     );
   }
 
   return (
-    <div style={{ border: '1px solid #111', borderRadius: '10px', overflow: 'hidden' }}>
+    <div style={{ border: `1px solid ${colors.border}` }}>
       {analyses.map((a, i) => {
         const score = Math.round(Number(a.match_score || 0));
-        const scoreColor = score >= 80 ? '#10B981' : score >= 60 ? '#F59E0B' : '#EF4444';
         return (
           <motion.div
             key={a.id}
@@ -163,25 +351,78 @@ function HistoryList({ analyses, onView }) {
             transition={{ delay: i * 0.04 }}
             onClick={() => onView(a)}
             style={{
-              display: 'grid', gridTemplateColumns: '90px 1fr 120px 120px',
-              gap: '16px', alignItems: 'center', padding: '16px 24px',
-              borderBottom: i < analyses.length - 1 ? '1px solid #111' : 'none',
-              background: '#080808', cursor: 'pointer', transition: 'background 0.15s',
+              display: 'grid',
+              gridTemplateColumns: '90px 1fr 120px 120px',
+              gap: 16,
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom:
+                i < analyses.length - 1 ? `1px solid ${colors.border}` : 'none',
+              background: colors.card,
+              cursor: 'pointer',
+              transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#0c0c0c')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = '#080808')}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = colors.elevated)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = colors.card)
+            }
           >
-            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '24px', fontWeight: '800', color: scoreColor, letterSpacing: '-1px' }}>
-              {score}<span style={{ fontSize: '14px', color: '#444' }}>%</span>
-            </div>
+            {/* Score */}
             <div>
-              <p style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{a.job_title || 'Untitled role'}</p>
-              <p style={{ color: '#6b7280', fontSize: '12px' }}>{a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}</p>
+              <span
+                style={{
+                  fontFamily: fonts.serif,
+                  fontSize: 24,
+                  fontWeight: 500,
+                  color: colors.cream,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {score}
+              </span>
+              <span style={{ ...t.caption, fontSize: 12 }}>%</span>
             </div>
-            <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-              {Array.isArray(a.missing_skills) ? `${a.missing_skills.length} gaps` : '—'}
+            {/* Title + date */}
+            <div>
+              <p
+                style={{
+                  color: colors.creamDim,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  fontFamily: fonts.sans,
+                  margin: 0,
+                }}
+              >
+                {a.job_title || 'Untitled role'}
+              </p>
+              <p style={{ ...t.caption, margin: '2px 0 0' }}>
+                {a.generated_at
+                  ? new Date(a.generated_at).toLocaleString()
+                  : '—'}
+              </p>
             </div>
-            <div style={{ textAlign: 'right', color: '#3B82F6', fontSize: '13px', fontWeight: '600' }}>view →</div>
+            {/* Gaps */}
+            <div style={{ color: colors.textMuted, fontSize: 12, fontFamily: fonts.sans }}>
+              {Array.isArray(a.missing_skills)
+                ? `${a.missing_skills.length} gaps`
+                : '—'}
+            </div>
+            {/* View link */}
+            <div
+              style={{
+                textAlign: 'right',
+                color: colors.gold,
+                fontSize: 12,
+                fontWeight: 500,
+                fontFamily: fonts.sans,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              view →
+            </div>
           </motion.div>
         );
       })}
@@ -189,6 +430,66 @@ function HistoryList({ analyses, onView }) {
   );
 }
 
+// ── Loading State ────────────────────────────────────────────────────────
+function LoadingState() {
+  return (
+    <div
+      style={{
+        background: colors.ink,
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <motion.div
+        animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            border: `1px solid ${colors.goldBorder}`,
+            borderRadius: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 16,
+          }}
+        >
+          <span
+            style={{
+              color: colors.gold,
+              fontFamily: fonts.serif,
+              fontStyle: 'italic',
+              fontWeight: 500,
+              fontSize: 28,
+            }}
+          >
+            R
+          </span>
+        </div>
+      </motion.div>
+      <motion.p
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        style={{
+          color: colors.textDim,
+          fontSize: 11,
+          fontFamily: fonts.sans,
+          letterSpacing: '0.24em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Loading Dashboard...
+      </motion.p>
+    </div>
+  );
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [resumes, setResumes] = useState([]);
@@ -241,73 +542,125 @@ export default function Dashboard() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await api.post('/api/resumes/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/api/resumes/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setResumes((prev) => [
-        { id: res.data.resume_id, file_name: file.name, created_at: new Date().toISOString() },
+        {
+          id: res.data.resume_id,
+          file_name: file.name,
+          created_at: new Date().toISOString(),
+        },
         ...prev,
       ]);
     } catch (err) {
-      alert('Upload failed: ' + (err.response?.data?.detail || err.response?.data?.error || 'Unknown error'));
+      alert(
+        'Upload failed: ' +
+          (err.response?.data?.detail ||
+            err.response?.data?.error ||
+            'Unknown error')
+      );
     } finally {
       setUploading(false);
     }
   };
 
   if (loading) {
-    return (
-      <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <motion.div animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-          <div style={{ width: '48px', height: '48px', background: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-            <span style={{ color: 'black', fontWeight: '900', fontSize: '24px' }}>R</span>
-          </div>
-        </motion.div>
-        <motion.p animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ color: '#6b7280', fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Loading Dashboard...
-        </motion.p>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   const avgScore = analyses.length
-    ? Math.round(analyses.reduce((s, a) => s + Number(a.match_score || 0), 0) / analyses.length)
+    ? Math.round(
+        analyses.reduce((s, a) => s + Number(a.match_score || 0), 0) /
+          analyses.length
+      )
     : 0;
 
   return (
-    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
+    <div
+      style={{
+        ...t.page,
+        display: 'flex',
+        fontFamily: fonts.sans,
+      }}
+    >
       <Sidebar user={user} active={active} setActive={setActive} navigate={navigate} />
 
-      <main style={{ marginLeft: '220px', flex: 1, padding: '48px' }}>
+      <main style={{ marginLeft: 220, flex: 1, padding: '48px 56px' }}>
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ marginBottom: '48px' }}>
-          <p style={{ color: '#444', fontSize: '13px', letterSpacing: '0.05em', marginBottom: '8px' }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          style={{ marginBottom: 48 }}
+        >
+          <p
+            style={{
+              fontFamily: fonts.sans,
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.24em',
+              textTransform: 'uppercase',
+              color: colors.gold,
+              marginBottom: 8,
+            }}
+          >
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            })}
           </p>
-          <h1 style={{ color: 'white', fontSize: '28px', fontWeight: '800', letterSpacing: '-0.5px' }}>
-            Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.full_name?.split(' ')[0] || 'there'}.
+          <h1
+            style={{
+              fontFamily: fonts.serif,
+              fontWeight: 400,
+              fontSize: 'clamp(1.8rem, 3.5vw, 2.8rem)',
+              color: colors.cream,
+              letterSpacing: '-0.02em',
+              margin: 0,
+            }}
+          >
+            Good{' '}
+            {new Date().getHours() < 12 ? 'morning' : 'afternoon'},{' '}
+            {user?.full_name?.split(' ')[0] || 'there'}.
           </h1>
         </motion.div>
 
-        {/* Stats Row */}
+        {/* Stats Row — editorial grid with gold border */}
         <div
           style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px',
-            background: '#111', borderRadius: '12px', overflow: 'hidden', marginBottom: '32px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 0,
+            border: `1px solid ${colors.border}`,
+            marginBottom: 32,
           }}
         >
           <StatTile label="Resumes" value={resumes.length} delay={0.1} />
           <StatTile label="Analyses Run" value={analyses.length} delay={0.15} />
           <StatTile label="Avg Match" value={`${avgScore}%`} delay={0.2} />
-          <StatTile label="Plan" value="Free" delay={0.25} />
+          <StatTile
+            label="Plan"
+            value="Free"
+            delay={0.25}
+            style={{ borderRight: 'none' }}
+          />
         </div>
 
+        {/* Active view */}
         {active === 'dashboard' && (
           <>
             <UploadCard uploading={uploading} onUpload={handleUpload} />
             <div>
-              <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>
-                Your Resumes {resumes.length > 0 && `— ${resumes.length}`}
+              <p style={{ ...t.label, marginBottom: 16 }}>
+                Your Resumes{' '}
+                {resumes.length > 0 && `— ${resumes.length}`}
               </p>
-              <ResumesList resumes={resumes} onAnalyze={(id) => navigate(`/analyze/${id}`)} />
+              <ResumesList
+                resumes={resumes}
+                onAnalyze={(id) => navigate(`/analyze/${id}`)}
+              />
             </div>
           </>
         )}
@@ -316,26 +669,30 @@ export default function Dashboard() {
           <>
             <UploadCard uploading={uploading} onUpload={handleUpload} />
             <div>
-              <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>
-                All Resumes
-              </p>
-              <ResumesList resumes={resumes} onAnalyze={(id) => navigate(`/analyze/${id}`)} />
+              <p style={{ ...t.label, marginBottom: 16 }}>All Resumes</p>
+              <ResumesList
+                resumes={resumes}
+                onAnalyze={(id) => navigate(`/analyze/${id}`)}
+              />
             </div>
           </>
         )}
 
         {active === 'analyze' && (
           <div>
-            <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>Pick a resume to analyze</p>
-            <ResumesList resumes={resumes} onAnalyze={(id) => navigate(`/analyze/${id}`)} />
+            <p style={{ ...t.label, marginBottom: 16 }}>
+              Pick a resume to analyze
+            </p>
+            <ResumesList
+              resumes={resumes}
+              onAnalyze={(id) => navigate(`/analyze/${id}`)}
+            />
           </div>
         )}
 
         {active === 'history' && (
           <div>
-            <p style={{ color: '#6b7280', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px' }}>
-              Past Analyses
-            </p>
+            <p style={{ ...t.label, marginBottom: 16 }}>Past Analyses</p>
             <HistoryList
               analyses={analyses}
               onView={(a) => {
