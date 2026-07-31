@@ -1,0 +1,33 @@
+# Render Blueprint — provisions the ResuMap FastAPI backend as a free web service.
+#
+# To deploy:
+#   1. Create a free Postgres database (Neon/Supabase) and copy its connection string.
+#   2. In the Render dashboard: New -> Blueprint -> select this repo.
+#   3. Render will prompt for the three env vars below (marked sync: false):
+#        - DATABASE_URL  -> the Postgres connection string
+#        - JWT_SECRET    -> same value as backend/.env
+#        - GROQ_API_KEY  -> same value as backend/.env
+#   4. Create. The service builds, boots uvicorn, and runs init_db() on startup.
+#
+# The backend intentionally has no persistent disk: Postgres holds all durable data
+# (users, resumes + extracted text, analyses). Uploaded resume FILES live on the
+# ephemeral instance filesystem (fine for the free tier; analysis works off the
+# stored raw text regardless).
+
+services:
+  - type: web
+    name: resumap-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

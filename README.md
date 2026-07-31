@@ -125,6 +125,24 @@ npm run dev          # starts API (port 5000) + web (port 5173)
 
 ---
 
+## Deployment
+
+Production = **Vercel (frontend) + Render (backend) + Postgres**.
+
+- Backend (FastAPI) deploys via `render.yaml` (Render Blueprint) as a free web
+  service — see the comments in that file for the click-through steps.
+  `DATABASE_URL`, `JWT_SECRET`, and `GROQ_API_KEY` are set as secrets (never
+  committed). Tables auto-create on startup via `init_db()`.
+- Frontend (Vite) deploys to Vercel with `VITE_API_URL` set to the Render
+  service URL (e.g. `https://resumap-api.onrender.com`), which replaces the
+  `localhost:5000` dev default in `frontend/src/lib/api.js`.
+- Database is a free-tier Postgres (Neon/Supabase). The app's models already
+  switch to Postgres UUID/JSONB types when `DATABASE_URL` is set.
+
+> Free-tier note: the backend has no persistent disk, so uploaded resume *files*
+> are ephemeral. Extracted resume text, accounts, and all analyses persist in
+> Postgres, so the screening features work normally.
+
 ## Project Status
 
 Complete — all endpoints functional, all pages built, auth flow verified, 
