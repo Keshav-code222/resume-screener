@@ -28,10 +28,12 @@ def _json_type():
 
 def _uuid_type():
     # Postgres UUID in production, fall back to String(36) for SQLite dev.
+    # as_uuid=False returns UUIDs as plain strings, matching the SQLite path so
+    # every schema can keep `id: str` on both backends.
     db_url = os.getenv("DATABASE_URL", "")
     if db_url.startswith("postgres"):
         from sqlalchemy.dialects.postgresql import UUID as _PG  # noqa: F811
-        return _PG(as_uuid=True)
+        return _PG(as_uuid=False)
     return String(36)
 
 
