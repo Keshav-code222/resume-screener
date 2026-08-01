@@ -25,6 +25,11 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # Pin a Python that has wheels for every pinned package below. Render's
+      # current default (3.14) has no prebuilt wheels for pydantic-core/
+      # psycopg2/bcrypt at these versions, which fails the pip install.
+      - key: PYTHON_VERSION
+        value: "3.13.4"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
