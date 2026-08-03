@@ -106,6 +106,7 @@ class ResumeAnalysis(Base):
     match_score = Column(Numeric(5, 2), nullable=True)
     missing_skills = Column(_json_type(), nullable=True)
     recommendations = Column(_json_type(), nullable=True)
+    verdict = Column(Text, nullable=True)
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
 
     resume = relationship("Resume", back_populates="analyses")
