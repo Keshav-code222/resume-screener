@@ -402,6 +402,21 @@ function HistoryList({ analyses, onView }) {
                   ? new Date(a.generated_at).toLocaleString()
                   : '—'}
               </p>
+              {a.verdict && (
+                <p
+                  style={{
+                    ...t.caption,
+                    margin: '4px 0 0',
+                    color: colors.textMuted,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: 320,
+                  }}
+                >
+                  {a.verdict}
+                </p>
+              )}
             </div>
             {/* Gaps */}
             <div style={{ color: colors.textMuted, fontSize: 12, fontFamily: fonts.sans }}>
@@ -696,7 +711,7 @@ export default function Dashboard() {
             <HistoryList
               analyses={analyses}
               onView={(a) => {
-                if (a.resume_id) navigate(`/analyze/${a.resume_id}`);
+                if (a.id) navigate(`/analysis/${a.id}`);
               }}
             />
           </div>

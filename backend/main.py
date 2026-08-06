@@ -342,6 +342,7 @@ def create_analysis(
         match_score=score,
         missing_skills=missing,
         recommendations=[r.model_dump() for r in recommendations],
+        verdict=verdict,
     )
     db.add(analysis)
     db.commit()
@@ -389,6 +390,7 @@ def list_analyses(
             "match_score": float(a.match_score or 0),
             "missing_skills": _maybe_load(a.missing_skills) or [],
             "recommendations": _maybe_load(a.recommendations) or [],
+            "verdict": a.verdict,
             "generated_at": a.generated_at.isoformat() if a.generated_at else None,
         }
         for a in rows
@@ -428,7 +430,7 @@ def get_analysis(
         "match_score": float(analysis.match_score or 0),
         "missing_skills": _maybe_load(analysis.missing_skills) or [],
         "recommendations": _maybe_load(analysis.recommendations) or [],
-        "verdict": None,
+        "verdict": analysis.verdict,
         "generated_at": analysis.generated_at.isoformat() if analysis.generated_at else None,
     }
 

@@ -44,6 +44,26 @@ def get_db():
         db.close()
 
 
+def _ensure_resume_analyses_columns():
+    """Lightweight migration for existing databases.
+
+    create_all() only creates whole tables — it never adds columns to a table
+    that already exists. When a column is introduced after the first deploy
+    (e.g. `verdict`), we ALTER the table if the column is missing.
+    """
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if "resume_analyses" not in insp.get_table_names():
+        return
+    existing = {c["name"] for c in insp.get_columns("resume_analyses")}
+    if "verdict" not in existing:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE resume_analyses ADD COLUMN verdict TEXT"))
+        print("[database] Added missing 'verdict' column to resume_analyses")
+
+
 def init_db():
     """Create all tables. Called on FastAPI startup."""
     Base.metadata.create_all(bind=engine)
+    _ensure_resume_analyses_columns()
