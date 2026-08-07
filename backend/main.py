@@ -22,9 +22,12 @@ from typing import List
 import pdfplumber
 from dotenv import load_dotenv
 from fastapi import (
-    APIRouter, Depends, FastAPI, File, Form, HTTPException, UploadFile, status,
+    APIRouter, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile,
+    status,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 
 from ai import analyze_resume
@@ -61,13 +64,39 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+# Allowed browser origins — never "*". Override via CORS_ORIGINS (comma-separated)
+# when a custom frontend domain is added. Dev origins + the production Vercel app.
+_DEFAULT_CORS = (
+    "http://localhost:5173,http://127.0.0.1:5173,https://resume-screener-one.vercel.app"
+)
+CORS_ORIGINS = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", _DEFAULT_CORS).split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting (slowapi). In-memory store is fine for a single free instance;
+# the point is to stop anonymous Groq abuse and auth brute-force, not global
+# fairness. Real client IP comes from Render's X-Forwarded-For proxy header.
+# ---------------------------------------------------------------------------
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+limiter = Limiter(key_func=_client_ip)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +117,9 @@ public_router = APIRouter()
 
 
 @public_router.post("/scan")
+@limiter.limit("10/minute")
 async def scan_resume(
+    request: Request,
     file: UploadFile = File(...),
     job_description: str = Form(...),
 ):
@@ -142,7 +173,8 @@ auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @auth_router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
-def signup(payload: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def signup(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=409, detail="Email already exists")
@@ -166,7 +198,8 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
 
 
 @auth_router.post("/login", response_model=Token)
-def login(payload: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def login(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")

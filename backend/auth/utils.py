@@ -11,7 +11,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # .env can have JWT_SECRET (FastAPI) or SECRET_KEY (legacy Flask).
-SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or "your-super-secret-key-change-this-in-production-2026"
+SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY")
+
+# Production runs on Postgres (DATABASE_URL set); local dev uses SQLite.
+# Never let production fall back to a known secret — that makes every JWT
+# forgeable. Fail hard at import time instead.
+IS_PRODUCTION = bool(os.getenv("DATABASE_URL", "").startswith("postgres"))
+if not SECRET_KEY:
+    if IS_PRODUCTION:
+        raise RuntimeError(
+            "JWT_SECRET must be set in production — refusing to boot with a "
+            "hardcoded default secret."
+        )
+    SECRET_KEY = "dev-only-insecure-secret-change-me"
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7   # 7 days
 
