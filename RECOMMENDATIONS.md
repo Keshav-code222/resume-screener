@@ -8,14 +8,18 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ## 🔴 Security / production hardening
 
-- [ ] **1. JWT secret must fail fast in production** — `backend/auth/utils.py:14`.
+- [x] **1. JWT secret must fail fast in production** — `backend/auth/utils.py:14-26`.
       If `JWT_SECRET`/`SECRET_KEY` is missing in prod, tokens are signed with a
       public hardcoded fallback → total auth bypass. Raise at startup instead of
       falling back to the default when running against Postgres.
-- [ ] **2. Pin CORS origins** — `backend/main.py:64-70`. Currently
-      `allow_origins=["*"]` + `allow_credentials=True` → any site can call the API.
-      Restrict to the Vercel frontend + localhost dev (configurable via
-      `CORS_ORIGINS` env var).
+      **Done 2026-08-08** — raises `RuntimeError` at import when `DATABASE_URL`
+      is Postgres and no secret is set; dev-only fallback kept for SQLite. Verified
+      locally (prod no-secret raises; prod+secret boots; dev falls back).
+- [x] **2. Pin CORS origins** — `backend/main.py:67-82`. Restrict to the Vercel
+      frontend + localhost dev (configurable via `CORS_ORIGINS` env var, comma-
+      separated), instead of `allow_origins=["*"]` + `allow_credentials=True`.
+      **Done 2026-08-08** — verified live on `resumap-api.onrender.com`: Vercel
+      origin + preflight accepted; `evil.example.com` gets no allow-origin header.
 - [ ] **3. Rate limiting** — `POST /scan` (unauthenticated, calls Groq = money)
       and login/signup have no limits. Add per-IP rate limiting (slowapi) so the
       free Groq quota / Render bandwidth can't be exhausted and auth can't be
