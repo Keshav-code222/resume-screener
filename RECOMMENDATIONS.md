@@ -20,10 +20,15 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       separated), instead of `allow_origins=["*"]` + `allow_credentials=True`.
       **Done 2026-08-08** — verified live on `resumap-api.onrender.com`: Vercel
       origin + preflight accepted; `evil.example.com` gets no allow-origin header.
-- [ ] **3. Rate limiting** — `POST /scan` (unauthenticated, calls Groq = money)
+- [x] **3. Rate limiting** — `POST /scan` (unauthenticated, calls Groq = money)
       and login/signup have no limits. Add per-IP rate limiting (slowapi) so the
       free Groq quota / Render bandwidth can't be exhausted and auth can't be
       brute-forced.
+      **Done 2026-08-10** — slowapi per-IP limits in `backend/main.py`:
+      `/scan` 10/min, signup & login 20/min (trusts Render's
+      `X-Forwarded-For`). Verified live on `resumap-api.onrender.com`: 11th
+      `/scan` → 429, 21st `/login` → 429, fresh IP stays allowed. Local smoke
+      test `backend/test_rate_limit.py` passes 6/6.
 
 ## 🟠 Product / UX gaps
 
