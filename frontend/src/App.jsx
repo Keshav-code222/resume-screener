@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Analyze from './pages/Analyze';
 import SavedAnalysis from './pages/SavedAnalysis';
+import PublicScan from './pages/PublicScan';
 
 // PageWrapper — pure layout shell. We deliberately skip framer-motion's
 // enter/exit transitions here because they fight with the Landing hero's
@@ -22,6 +23,7 @@ function AnimatedRoutes() {
   return (
     <Routes location={location} key={location.pathname}>
       <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
+      <Route path="/scan" element={<PageWrapper><PublicScan /></PageWrapper>} />
       <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
       <Route path="/dashboard" element={<PageWrapper><Dashboard /></PageWrapper>} />
       <Route path="/analyze/:resumeId" element={<PageWrapper><Analyze /></PageWrapper>} />

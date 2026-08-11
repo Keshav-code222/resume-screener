@@ -83,8 +83,8 @@ export default function SiteNav({ transparent = false, onNavigate }) {
           <GhostButton small onClick={() => navigate('/login')}>
             Sign in
           </GhostButton>
-          <FilledButton small onClick={() => navigate('/login')}>
-            Begin
+          <FilledButton small onClick={() => navigate('/scan')}>
+            Try it free
           </FilledButton>
         </div>
       </div>

@@ -108,7 +108,9 @@ function HeroProlog() {
             justifyContent: 'center',
           }}
         >
-          <FilledButton onClick={() => navigate('/login')}>Begin</FilledButton>
+          <FilledButton onClick={() => navigate('/scan')}>
+            Try a free scan
+          </FilledButton>
           <GhostButton
             onClick={() => {
               document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
@@ -397,7 +399,7 @@ function ResultsChapter() {
             path to improve it. No dashboards-for-dashboards-sake.
           </p>
           <div style={{ marginTop: 32, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <GhostButton onClick={() => navigate('/login')}>Try a reading</GhostButton>
+            <GhostButton onClick={() => navigate('/scan')}>Try a reading</GhostButton>
           </div>
         </div>
 
@@ -702,7 +704,7 @@ function BeginChapter() {
         <ItalicByline color="cream" size={16}>
           one free reading. no card. no catch.
         </ItalicByline>
-        <FilledButton onClick={() => navigate('/login')} style={{ marginTop: 24 }}>
+        <FilledButton onClick={() => navigate('/scan')} style={{ marginTop: 24 }}>
           Begin &mdash; it&rsquo;s free
         </FilledButton>
         <SignaturePhrase size={14} color="mute-500">
