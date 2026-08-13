@@ -32,9 +32,20 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ## 🟠 Product / UX gaps
 
-- [ ] **4. Wire up anonymous "try it" scan** — `/scan` endpoint exists and README
+- [x] **4. Wire up anonymous "try it" scan** — `/scan` endpoint exists and README
       advertises it, but no frontend route/CTA uses it (all Landing CTAs →
       /login). Build a public scan page (conversion lever) or remove the endpoint.
+      **Done 2026-08-13** — `PublicScan` page (`frontend/src/pages/PublicScan.jsx`)
+      is reachable at `/scan` (registered in `App.jsx`); the three primary Landing
+      CTAs all route to `/scan` (`HeroProlog` "Try a free scan", `ResultsChapter`
+      "Try a reading", `BeginChapter` "Begin — it's free") and the top nav
+      `FilledButton` ("Try it free") does too. The page posts to
+      `POST /scan`, normalizes the `overall_score` / `missing_keywords` /
+      `top_suggestions` payload into the `AnalysisResults` shape, and
+      reuses `LoadingAnalysis`. Anonymous flow is end-to-end live: a real PDF
+      against `https://resumap-api.onrender.com/scan` returned a 60% match
+      with missing keywords and a verdict. Secondary CTA on the result page
+      funnels visitors to `/login` (conversion lever preserved).
 - [ ] **5. Delete endpoints for resumes & analyses** — models cascade on delete but
       no `DELETE /api/resumes/{id}` / `DELETE /api/analyses/{id}`. Users can't
       manage their own data.
