@@ -46,9 +46,22 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       against `https://resumap-api.onrender.com/scan` returned a 60% match
       with missing keywords and a verdict. Secondary CTA on the result page
       funnels visitors to `/login` (conversion lever preserved).
-- [ ] **5. Delete endpoints for resumes & analyses** — models cascade on delete but
+- [x] **5. Delete endpoints for resumes & analyses** — models cascade on delete but
       no `DELETE /api/resumes/{id}` / `DELETE /api/analyses/{id}`. Users can't
       manage their own data.
+      **Done 2026-08-14** — both endpoints in `backend/main.py`. Ownership
+      checked via joined `Resume.user_id`; missing-or-not-yours returns
+      `404` (no existence leak). Resume delete cascades to its analyses,
+      removes the on-disk file, and promotes another resume to
+      `is_current` if the deleted one was current. Frontend
+      `frontend/src/pages/Dashboard.jsx` adds a `Delete` button on every
+      resume and analysis row plus an `AnimatePresence` confirm dialog;
+      rows exit-animate out and (for resume deletes) the history list is
+      refreshed so cascaded analyses disappear. Verified locally
+      (`backend/test_delete_endpoints.py` 12/12 pass — ownership, cascade,
+      cross-user 404, double-delete) and live on
+      `resumap-api.onrender.com` (signup → upload → analyze → delete
+      analysis → delete resume → double-delete 404, all expected codes).
 - [ ] **6. Uploaded files: preview/download or stop storing** — `_store_file`
       (`backend/main.py:195`) writes bytes no one can access; no cleanup (leak on
       dev, ephemeral on Render). Only `raw_text` is used downstream.
