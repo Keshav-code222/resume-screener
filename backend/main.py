@@ -5,8 +5,11 @@ Single entry point that exposes:
   - Public anonymous scan:    POST /scan
   - Auth:                     POST /api/auth/signup, /api/auth/login
   - User:                     GET  /api/users/me
-  - Resumes:                  GET  /api/resumes, POST /api/resumes/upload
-  - Analyses:                 POST /api/analyses, GET /api/analyses/{id}
+  - Resumes:                  GET  /api/resumes, POST /api/resumes/upload,
+                              DELETE /api/resumes/{id}
+  - Analyses:                 POST /api/analyses, GET /api/analyses,
+                              GET /api/analyses/{id},
+                              DELETE /api/analyses/{id}
   - Health:                   GET  /
 
 Run locally:
@@ -318,6 +321,52 @@ async def upload_resume(
     )
 
 
+@resume_router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_resume(
+    resume_id: str,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a resume owned by the current user. Cascades to its analyses."""
+    resume = (
+        db.query(Resume)
+        .filter(Resume.id == resume_id, Resume.user_id == current.id)
+        .first()
+    )
+    if not resume:
+        # Same code for missing and not-yours — don't leak ownership info.
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    was_current = bool(resume.is_current)
+
+    # Best-effort filesystem cleanup. We don't fail the request if the file is
+    # already gone (ephemeral Render disk loses files on restart anyway).
+    file_path = resume.file_path
+    db.delete(resume)
+    db.flush()
+
+    if was_current:
+        # Promote the next-most-recent remaining resume so "is_current"
+        # invariant holds (at most one current resume per user).
+        next_resume = (
+            db.query(Resume)
+            .filter(Resume.user_id == current.id)
+            .order_by(Resume.created_at.desc())
+            .first()
+        )
+        if next_resume is not None:
+            next_resume.is_current = True
+
+    db.commit()
+
+    if file_path:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except OSError as exc:  # pragma: no cover
+            print(f"[delete_resume] could not remove {file_path}: {exc}")
+
+
 # ---------------------------------------------------------------------------
 # Analyses
 # ---------------------------------------------------------------------------
@@ -468,6 +517,29 @@ def get_analysis(
     }
 
 
+@analysis_router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_analysis(
+    analysis_id: str,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete an analysis owned by the current user. Does NOT delete the resume."""
+    analysis = (
+        db.query(ResumeAnalysis)
+        .join(Resume, ResumeAnalysis.resume_id == Resume.id)
+        .filter(
+            ResumeAnalysis.id == analysis_id, Resume.user_id == current.id
+        )
+        .first()
+    )
+    if not analysis:
+        # Same code for missing and not-yours — don't leak ownership info.
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    db.delete(analysis)
+    db.commit()
+
+
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -484,8 +556,11 @@ def root():
             "GET  /api/users/me",
             "GET  /api/resumes",
             "POST /api/resumes/upload",
+            "DELETE /api/resumes/{id}",
             "POST /api/analyses",
+            "GET  /api/analyses",
             "GET  /api/analyses/{id}",
+            "DELETE /api/analyses/{id}",
         ],
     }
 

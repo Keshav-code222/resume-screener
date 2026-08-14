@@ -240,7 +240,7 @@ function UploadCard({ uploading, onUpload }) {
 }
 
 // ── Resumes List ─────────────────────────────────────────────────────────
-function ResumesList({ resumes, onAnalyze }) {
+function ResumesList({ resumes, onAnalyze, onDelete }) {
   if (resumes.length === 0) {
     return (
       <div
@@ -311,9 +311,20 @@ function ResumesList({ resumes, onAnalyze }) {
                 </p>
               </div>
             </div>
-            <GhostButton small onClick={() => onAnalyze(resume.id)}>
-              Analyze →
-            </GhostButton>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <GhostButton small onClick={() => onAnalyze(resume.id)}>
+                Analyze →
+              </GhostButton>
+              {onDelete && (
+                <GhostButton
+                  small
+                  onClick={() => onDelete(resume)}
+                  style={{ color: colors.textDim }}
+                >
+                  Delete
+                </GhostButton>
+              )}
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -322,7 +333,7 @@ function ResumesList({ resumes, onAnalyze }) {
 }
 
 // ── History List ─────────────────────────────────────────────────────────
-function HistoryList({ analyses, onView }) {
+function HistoryList({ analyses, onView, onDelete }) {
   if (analyses.length === 0) {
     return (
       <div
@@ -352,7 +363,7 @@ function HistoryList({ analyses, onView }) {
             onClick={() => onView(a)}
             style={{
               display: 'grid',
-              gridTemplateColumns: '90px 1fr 120px 120px',
+              gridTemplateColumns: '90px 1fr 120px 90px 90px',
               gap: 16,
               alignItems: 'center',
               padding: '16px 24px',
@@ -438,12 +449,161 @@ function HistoryList({ analyses, onView }) {
             >
               view →
             </div>
+            {/* Delete */}
+            {onDelete && (
+              <div style={{ textAlign: 'right' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(a);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: colors.textDim,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    fontFamily: fonts.sans,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '4px 8px',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = colors.creamDim)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = colors.textDim)
+                  }
+                >
+                  delete
+                </button>
+              </div>
+            )}
           </motion.div>
         );
       })}
     </div>
   );
 }
+
+// ── Confirm Dialog ───────────────────────────────────────────────────────
+function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', busy, onConfirm, onCancel }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          onClick={onCancel}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: colors.card,
+              border: `1px solid ${colors.border}`,
+              padding: '32px 32px 24px',
+              maxWidth: 440,
+              width: 'calc(100% - 48px)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+            }}
+          >
+            <p
+              style={{
+                ...t.label,
+                marginBottom: 8,
+                color: colors.gold,
+              }}
+            >
+              {title}
+            </p>
+            <p
+              style={{
+                fontFamily: fonts.serif,
+                fontSize: 17,
+                color: colors.cream,
+                margin: '0 0 8px',
+                lineHeight: 1.5,
+              }}
+            >
+              {message.headline}
+            </p>
+            {message.body && (
+              <p
+                style={{
+                  fontSize: 13,
+                  color: colors.textMuted,
+                  fontFamily: fonts.sans,
+                  margin: '0 0 24px',
+                  lineHeight: 1.5,
+                }}
+              >
+                {message.body}
+              </p>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+                marginTop: 16,
+              }}
+            >
+              <GhostButton small onClick={onCancel} disabled={busy}>
+                Cancel
+              </GhostButton>
+              <button
+                onClick={onConfirm}
+                disabled={busy}
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.creamDim,
+                  fontFamily: fonts.sans,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  padding: '10px 18px',
+                  cursor: busy ? 'wait' : 'pointer',
+                  opacity: busy ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!busy) {
+                    e.currentTarget.style.borderColor = colors.goldMuted;
+                    e.currentTarget.style.color = colors.goldLight;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.color = colors.creamDim;
+                }}
+              >
+                {busy ? 'Deleting...' : confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 
 // ── Loading State ────────────────────────────────────────────────────────
 function LoadingState() {
@@ -512,6 +672,8 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [active, setActive] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState(null); // {kind, target}
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -577,6 +739,49 @@ export default function Dashboard() {
       );
     } finally {
       setUploading(false);
+    }
+  };
+
+  const askDeleteResume = (resume) => {
+    setPendingDelete({ kind: 'resume', target: resume });
+  };
+
+  const askDeleteAnalysis = (analysis) => {
+    setPendingDelete({ kind: 'analysis', target: analysis });
+  };
+
+  const cancelDelete = () => {
+    if (deleting) return;
+    setPendingDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { kind, target } = pendingDelete;
+    setDeleting(true);
+    try {
+      if (kind === 'resume') {
+        await api.delete(`/api/resumes/${target.id}`);
+        // Remove locally; the AnimatePresence on ResumesList will animate exit.
+        setResumes((prev) => prev.filter((r) => r.id !== target.id));
+        // Analyses that referenced this resume cascade-deleted on the server;
+        // refresh the list so the History view stays accurate.
+        fetchAnalyses();
+      } else if (kind === 'analysis') {
+        await api.delete(`/api/analyses/${target.id}`);
+        setAnalyses((prev) => prev.filter((a) => a.id !== target.id));
+      }
+      setPendingDelete(null);
+    } catch (err) {
+      console.error('delete failed', err);
+      alert(
+        'Delete failed: ' +
+          (err.response?.data?.detail ||
+            err.response?.data?.error ||
+            'Unknown error')
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -675,6 +880,7 @@ export default function Dashboard() {
               <ResumesList
                 resumes={resumes}
                 onAnalyze={(id) => navigate(`/analyze/${id}`)}
+                onDelete={askDeleteResume}
               />
             </div>
           </>
@@ -688,6 +894,7 @@ export default function Dashboard() {
               <ResumesList
                 resumes={resumes}
                 onAnalyze={(id) => navigate(`/analyze/${id}`)}
+                onDelete={askDeleteResume}
               />
             </div>
           </>
@@ -701,6 +908,7 @@ export default function Dashboard() {
             <ResumesList
               resumes={resumes}
               onAnalyze={(id) => navigate(`/analyze/${id}`)}
+              onDelete={askDeleteResume}
             />
           </div>
         )}
@@ -713,10 +921,37 @@ export default function Dashboard() {
               onView={(a) => {
                 if (a.id) navigate(`/analysis/${a.id}`);
               }}
+              onDelete={askDeleteAnalysis}
             />
           </div>
         )}
       </main>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={
+          pendingDelete?.kind === 'resume' ? 'Delete Resume' : 'Delete Analysis'
+        }
+        message={
+          pendingDelete?.kind === 'resume'
+            ? {
+                headline: `Delete ${pendingDelete.target.file_name}?`,
+                body:
+                  'This removes the resume and every analysis you ran against it. This cannot be undone.',
+              }
+            : {
+                headline: `Delete this analysis${
+                  pendingDelete?.target?.job_title
+                    ? ` for “${pendingDelete.target.job_title}”`
+                    : ''
+                }?`,
+                body: 'The analysis will be removed from your history. Your resume will not be affected.',
+              }
+        }
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }
