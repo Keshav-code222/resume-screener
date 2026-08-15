@@ -29,6 +29,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
@@ -367,6 +368,56 @@ def delete_resume(
             print(f"[delete_resume] could not remove {file_path}: {exc}")
 
 
+@resume_router.get("/{resume_id}/download")
+def download_resume(
+    resume_id: str,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Serve the originally uploaded file back to its owner.
+
+    Used by the Dashboard preview/download affordance. Render's ephemeral disk
+    means a file may be gone between upload and download — in that case we
+    return 410 Gone (the metadata is still there, the bytes are not). For
+    privacy, missing-and-not-yours both return 404 (no existence leak).
+    """
+    resume = (
+        db.query(Resume)
+        .filter(Resume.id == resume_id, Resume.user_id == current.id)
+        .first()
+    )
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    file_path = resume.file_path
+    if not file_path or not os.path.exists(file_path):
+        # Common on Render: disk is ephemeral, files vanish on restart.
+        raise HTTPException(
+            status_code=410,
+            detail=(
+                "Original file is no longer available. Re-upload your resume "
+                "to restore download/preview."
+            ),
+        )
+
+    # Use the original extension (PDF/DOCX) for the served name and pick the
+    # right MIME type so browsers open PDFs inline instead of forcing a save.
+    ext = os.path.splitext(file_path)[1].lower()
+    media_type = (
+        "application/pdf"
+        if ext == ".pdf"
+        else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        if ext == ".docx"
+        else "application/octet-stream"
+    )
+    download_name = resume.file_name or f"resume{ext}"
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        filename=download_name,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Analyses
 # ---------------------------------------------------------------------------
@@ -556,6 +607,7 @@ def root():
             "GET  /api/users/me",
             "GET  /api/resumes",
             "POST /api/resumes/upload",
+            "GET  /api/resumes/{id}/download",
             "DELETE /api/resumes/{id}",
             "POST /api/analyses",
             "GET  /api/analyses",

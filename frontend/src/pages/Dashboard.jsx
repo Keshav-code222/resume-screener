@@ -240,7 +240,7 @@ function UploadCard({ uploading, onUpload }) {
 }
 
 // ── Resumes List ─────────────────────────────────────────────────────────
-function ResumesList({ resumes, onAnalyze, onDelete }) {
+function ResumesList({ resumes, onAnalyze, onDelete, onPreview, onDownload }) {
   if (resumes.length === 0) {
     return (
       <div
@@ -260,7 +260,11 @@ function ResumesList({ resumes, onAnalyze, onDelete }) {
   return (
     <div style={{ border: `1px solid ${colors.border}` }}>
       <AnimatePresence>
-        {resumes.map((resume, i) => (
+        {resumes.map((resume, i) => {
+          // Only PDFs can be inlined; DOCX falls back to download-only.
+          const ext = (resume.file_name || '').split('.').pop()?.toLowerCase();
+          const canPreview = ext === 'pdf';
+          return (
           <motion.div
             key={resume.id}
             layout
@@ -311,10 +315,28 @@ function ResumesList({ resumes, onAnalyze, onDelete }) {
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <GhostButton small onClick={() => onAnalyze(resume.id)}>
                 Analyze →
               </GhostButton>
+              {canPreview && onPreview && (
+                <GhostButton
+                  small
+                  onClick={() => onPreview(resume)}
+                  style={{ color: colors.textDim }}
+                >
+                  Preview
+                </GhostButton>
+              )}
+              {onDownload && (
+                <GhostButton
+                  small
+                  onClick={() => onDownload(resume)}
+                  style={{ color: colors.textDim }}
+                >
+                  Download
+                </GhostButton>
+              )}
               {onDelete && (
                 <GhostButton
                   small
@@ -326,7 +348,8 @@ function ResumesList({ resumes, onAnalyze, onDelete }) {
               )}
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </AnimatePresence>
     </div>
   );
@@ -486,6 +509,209 @@ function HistoryList({ analyses, onView, onDelete }) {
     </div>
   );
 }
+
+// ── Preview Modal ────────────────────────────────────────────────────────
+// Inline PDF preview rendered in an iframe. We can't point the iframe at the
+// download endpoint directly — iframes are sandboxed documents that can't
+// read the parent's localStorage, and we don't use cookies, so the JWT would
+// be missing. Instead, fetch the bytes through axios (which DOES attach the
+// JWT) and feed a blob: URL to the iframe. The token never leaves JS memory
+// and never appears in the URL.
+function PreviewModal({ open, resume, onClose }) {
+  const [src, setSrc] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !resume) return;
+
+    let cancelled = false;
+    let blobUrl = null;
+    setError(null);
+    setLoading(true);
+
+    (async () => {
+      try {
+        const res = await api.get(
+          `/api/resumes/${resume.id}/download`,
+          { responseType: 'blob' },
+        );
+        if (cancelled) return;
+        const blob = new Blob([res.data], {
+          type: res.headers['content-type'] || 'application/pdf',
+        });
+        blobUrl = URL.createObjectURL(blob);
+        setSrc(blobUrl);
+      } catch (err) {
+        if (cancelled) return;
+        const detail =
+          err.response?.data?.detail ||
+          (err.response?.status === 410
+            ? 'Original file is no longer available — re-upload to restore preview.'
+            : 'Could not load preview.');
+        setError(detail);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [open, resume]);
+
+  if (!open || !resume) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 110,
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12, scale: 0.98 }}
+          transition={{ duration: 0.2 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: colors.card,
+            border: `1px solid ${colors.border}`,
+            width: 'calc(100vw - 64px)',
+            height: 'calc(100vh - 64px)',
+            maxWidth: 1100,
+            maxHeight: 900,
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 24px',
+              borderBottom: `1px solid ${colors.border}`,
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  ...t.label,
+                  margin: 0,
+                  color: colors.gold,
+                }}
+              >
+                Preview
+              </p>
+              <p
+                style={{
+                  fontFamily: fonts.serif,
+                  fontSize: 16,
+                  color: colors.cream,
+                  margin: '4px 0 0',
+                  fontWeight: 500,
+                }}
+              >
+                {resume.file_name}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close preview"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: colors.textDim,
+                fontFamily: fonts.sans,
+                fontSize: 22,
+                padding: 4,
+                lineHeight: 1,
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = colors.creamDim)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = colors.textDim)
+              }
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ flex: 1, position: 'relative', background: colors.ink }}>
+            {loading && (
+              <p
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: colors.textDim,
+                  fontFamily: fonts.sans,
+                  fontSize: 12,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  margin: 0,
+                }}
+              >
+                Loading preview…
+              </p>
+            )}
+            {error && (
+              <p
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: colors.errorText,
+                  fontFamily: fonts.sans,
+                  fontSize: 13,
+                  margin: 0,
+                  padding: 24,
+                  textAlign: 'center',
+                }}
+              >
+                {error}
+              </p>
+            )}
+            {src && !error && (
+              <iframe
+                src={src}
+                title={`Preview of ${resume.file_name}`}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                }}
+              />
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 
 // ── Confirm Dialog ───────────────────────────────────────────────────────
 function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', busy, onConfirm, onCancel }) {
@@ -674,6 +900,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState(null); // {kind, target}
   const [deleting, setDeleting] = useState(false);
+  const [previewResume, setPreviewResume] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -748,6 +975,44 @@ export default function Dashboard() {
 
   const askDeleteAnalysis = (analysis) => {
     setPendingDelete({ kind: 'analysis', target: analysis });
+  };
+
+  const handlePreviewResume = (resume) => {
+    setPreviewResume(resume);
+  };
+
+  const closePreview = () => {
+    setPreviewResume(null);
+  };
+
+  const handleDownloadResume = async (resume) => {
+    try {
+      const res = await api.get(`/api/resumes/${resume.id}/download`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], {
+        type: res.headers['content-type'] || 'application/octet-stream',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = resume.file_name || 'resume.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Revoke after the click handler has had a chance to use the URL.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      const status = err.response?.status;
+      const detail =
+        err.response?.data?.detail ||
+        (status === 410
+          ? 'Original file is no longer available — re-upload to restore download.'
+          : status === 404
+          ? 'Resume not found.'
+          : 'Download failed.');
+      alert(detail);
+    }
   };
 
   const cancelDelete = () => {
@@ -881,6 +1146,8 @@ export default function Dashboard() {
                 resumes={resumes}
                 onAnalyze={(id) => navigate(`/analyze/${id}`)}
                 onDelete={askDeleteResume}
+                onPreview={handlePreviewResume}
+                onDownload={handleDownloadResume}
               />
             </div>
           </>
@@ -895,6 +1162,8 @@ export default function Dashboard() {
                 resumes={resumes}
                 onAnalyze={(id) => navigate(`/analyze/${id}`)}
                 onDelete={askDeleteResume}
+                onPreview={handlePreviewResume}
+                onDownload={handleDownloadResume}
               />
             </div>
           </>
@@ -909,6 +1178,8 @@ export default function Dashboard() {
               resumes={resumes}
               onAnalyze={(id) => navigate(`/analyze/${id}`)}
               onDelete={askDeleteResume}
+              onPreview={handlePreviewResume}
+              onDownload={handleDownloadResume}
             />
           </div>
         )}
@@ -951,6 +1222,12 @@ export default function Dashboard() {
         busy={deleting}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
+      />
+
+      <PreviewModal
+        open={!!previewResume}
+        resume={previewResume}
+        onClose={closePreview}
       />
     </div>
   );
