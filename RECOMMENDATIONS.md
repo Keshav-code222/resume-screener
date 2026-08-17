@@ -62,9 +62,24 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       cross-user 404, double-delete) and live on
       `resumap-api.onrender.com` (signup → upload → analyze → delete
       analysis → delete resume → double-delete 404, all expected codes).
-- [ ] **6. Uploaded files: preview/download or stop storing** — `_store_file`
+- [x] **6. Uploaded files: preview/download or stop storing** — `_store_file`
       (`backend/main.py:195`) writes bytes no one can access; no cleanup (leak on
       dev, ephemeral on Render). Only `raw_text` is used downstream.
+      **Done 2026-08-15** — authenticated `GET /api/resumes/{id}/download`
+      in `backend/main.py` serves the original PDF/DOCX with the right
+      `Content-Type` and `Content-Disposition`. Ownership check returns
+      `404` (no existence leak); missing-file on Render's ephemeral disk
+      returns `410 Gone` with a re-upload hint. `Delete` cascades the row
+      *and* `os.remove`s the file (best-effort, swallows OSError). Frontend
+      `Dashboard.jsx` exposes `Preview` (PDF only) and `Download` on every
+      row; the inline `PreviewModal` fetches the file as a `blob` through
+      the shared axios client so the JWT is never in the iframe URL, then
+      renders it in an `<iframe src={blob:...}>`. Verified locally
+      (`backend/test_download_endpoint.py` 11/11 pass — owner 200, content-
+      type/bytes match, cross-user 404, missing-id 404, unauthenticated
+      401, DOCX content-type, delete cascades file, public `/scan` still
+      reachable) and live on `resumap-api.onrender.com` (signup → upload
+      → `/api/resumes/{id}/download` returns the original PDF bytes).
 - [ ] **7. Replace `alert()` on upload error** — `frontend/src/pages/Dashboard.jsx:572`
       with the inline error banner pattern used elsewhere.
 - [ ] **8. Global 401 handling** — `frontend/src/lib/api.js` attaches the token but
