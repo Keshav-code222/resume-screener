@@ -80,8 +80,21 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       401, DOCX content-type, delete cascades file, public `/scan` still
       reachable) and live on `resumap-api.onrender.com` (signup → upload
       → `/api/resumes/{id}/download` returns the original PDF bytes).
-- [ ] **7. Replace `alert()` on upload error** — `frontend/src/pages/Dashboard.jsx:572`
+- [x] **7. Replace `alert()` on upload error** — `frontend/src/pages/Dashboard.jsx:572`
       with the inline error banner pattern used elsewhere.
+      **Done 2026-08-17** — added a small `ErrorBanner` subcomponent to
+      `Dashboard.jsx` styled like the `PublicScan.jsx` banner (gold/dark
+      palette: `colors.error` bg + `errorText` text). Two error states in
+      the main component: `uploadError` is sticky (with a × dismiss)
+      because the user needs to see what went wrong, and `flashError` is
+      the auto-dismissing variant (5s) for inline actions like download
+      and delete that shouldn't block the next click. All three former
+      `alert()` call sites (upload catch, download 410/404 catch, delete
+      catch) now call `setUploadError` / `setFlashError` and the banner
+      renders above the stats row / active view. `handleUpload` also
+      clears `uploadError` on retry. Verified `npm run build` clean
+      (370 modules, 4.08s) and `grep "alert("` in the file only matches
+      the comment in `ErrorBanner`'s docstring.
 - [ ] **8. Global 401 handling** — `frontend/src/lib/api.js` attaches the token but
       only Dashboard catches expired sessions; Analyze/SavedAnalysis show generic
       errors. Add a response interceptor → redirect to /login.

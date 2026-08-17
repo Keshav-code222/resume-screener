@@ -831,6 +831,56 @@ function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', busy, on
 }
 
 
+// ── Error Banner ────────────────────────────────────────────────────────
+// Inline error surface that matches the PublicScan page banner. Used for
+// ephemeral failures (upload, download, delete) so we don't pop a blocking
+// `alert()` dialog in the middle of the editorial UI.
+function ErrorBanner({ message, onDismiss }) {
+  if (!message) return null;
+  return (
+    <motion.div
+      role="alert"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        background: colors.error,
+        border: '1px solid rgba(239, 68, 68, 0.3)',
+        padding: '12px 16px',
+        color: colors.errorText,
+        fontSize: 13,
+        fontFamily: fonts.sans,
+        marginBottom: 24,
+      }}
+    >
+      <span>{message}</span>
+      {onDismiss && (
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: colors.errorText,
+            cursor: 'pointer',
+            fontSize: 18,
+            lineHeight: 1,
+            padding: 0,
+          }}
+        >
+          ×
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
+
 // ── Loading State ────────────────────────────────────────────────────────
 function LoadingState() {
   return (
@@ -901,7 +951,21 @@ export default function Dashboard() {
   const [pendingDelete, setPendingDelete] = useState(null); // {kind, target}
   const [deleting, setDeleting] = useState(false);
   const [previewResume, setPreviewResume] = useState(null);
+  // Inline error banner. `uploadError` is sticky (user must dismiss or
+  // upload again); `flashError` is the auto-dismissing variant for inline
+  // actions like download / delete that shouldn't block the next click.
+  const [uploadError, setUploadError] = useState('');
+  const [flashError, setFlashError] = useState('');
   const navigate = useNavigate();
+
+  // Show a transient banner (download/delete) and clear it on its own so
+  // the user isn't left staring at stale errors. Cleanup on unmount or
+  // when a new message supersedes the old one.
+  useEffect(() => {
+    if (!flashError) return undefined;
+    const t = setTimeout(() => setFlashError(''), 5000);
+    return () => clearTimeout(t);
+  }, [flashError]);
 
   useEffect(() => {
     fetchUser();
@@ -943,6 +1007,7 @@ export default function Dashboard() {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
+    setUploadError('');
     const formData = new FormData();
     formData.append('file', file);
     try {
@@ -958,7 +1023,7 @@ export default function Dashboard() {
         ...prev,
       ]);
     } catch (err) {
-      alert(
+      setUploadError(
         'Upload failed: ' +
           (err.response?.data?.detail ||
             err.response?.data?.error ||
@@ -1011,7 +1076,7 @@ export default function Dashboard() {
           : status === 404
           ? 'Resume not found.'
           : 'Download failed.');
-      alert(detail);
+      setFlashError(detail);
     }
   };
 
@@ -1039,7 +1104,7 @@ export default function Dashboard() {
       setPendingDelete(null);
     } catch (err) {
       console.error('delete failed', err);
-      alert(
+      setFlashError(
         'Delete failed: ' +
           (err.response?.data?.detail ||
             err.response?.data?.error ||
@@ -1112,6 +1177,12 @@ export default function Dashboard() {
           </h1>
         </motion.div>
 
+        {/* Upload errors are sticky so the user can read them. */}
+        <ErrorBanner
+          message={uploadError}
+          onDismiss={() => setUploadError('')}
+        />
+
         {/* Stats Row — editorial grid with gold border */}
         <div
           style={{
@@ -1132,6 +1203,9 @@ export default function Dashboard() {
             style={{ borderRight: 'none' }}
           />
         </div>
+
+        {/* Inline action errors (download, delete) auto-dismiss after 5s. */}
+        <ErrorBanner message={flashError} />
 
         {/* Active view */}
         {active === 'dashboard' && (
