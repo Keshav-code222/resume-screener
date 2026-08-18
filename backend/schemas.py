@@ -79,3 +79,13 @@ class PublicScanRequest(BaseModel):
     Kept here for documentation; the real endpoint reads from a form upload.
     """
     pass
+
+
+# ----- Password reset -----
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str

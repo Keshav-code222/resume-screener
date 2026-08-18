@@ -5,7 +5,7 @@ SQLAlchemy models — mirror schema.sql (UUID PKs, JSON columns, FKs).
 import os
 import uuid
 from sqlalchemy import (
-    Column, String, Text, Boolean, DateTime, ForeignKey, Numeric, JSON,  # noqa: F401
+    Column, String, Text, Boolean, DateTime, ForeignKey, Numeric, JSON, Index,  # noqa: F401
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID  # noqa: F401
 from sqlalchemy.sql import func
@@ -124,3 +124,28 @@ class Subscription(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="subscription")
+
+
+class PasswordResetToken(Base):
+    """One-time password reset tokens.
+
+    We store a SHA-256 hash of the random token (never the raw token), so a
+    database leak doesn't yield working reset links. Tokens expire after
+    RESET_TOKEN_EXPIRE_HOURS (set in auth/utils.py) and are deleted after use.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = _uuid_col(primary_key=True, index=True)
+    user_id = _uuid_fk(
+        "users.id", ondelete="CASCADE", nullable=False, index=True
+    )
+    token_hash = Column(String(64), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    owner = relationship("User")
+
+    __table_args__ = (
+        # Lookup is by hash; the unique index doubles as the fast path.
+        Index("ix_password_reset_tokens_user_expiry", "user_id", "expires_at"),
+    )

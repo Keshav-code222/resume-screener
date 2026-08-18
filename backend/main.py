@@ -3,7 +3,9 @@ ResuMap — unified FastAPI backend.
 
 Single entry point that exposes:
   - Public anonymous scan:    POST /scan
-  - Auth:                     POST /api/auth/signup, /api/auth/login
+  - Auth:                     POST /api/auth/signup, /api/auth/login,
+                              POST /api/auth/forgot-password,
+                              POST /api/auth/reset-password
   - User:                     GET  /api/users/me
   - Resumes:                  GET  /api/resumes, POST /api/resumes/upload,
                               DELETE /api/resumes/{id}
@@ -20,6 +22,7 @@ import json
 import os
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import List
 
 import pdfplumber
@@ -36,12 +39,18 @@ from sqlalchemy.orm import Session
 
 from ai import analyze_resume
 from auth.dependencies import get_current_user
-from auth.utils import create_access_token, get_password_hash, verify_password
+from auth.utils import (
+    _hash_reset_token, create_access_token, generate_reset_token,
+    get_password_hash, reset_token_matches, verify_password,
+)
 from database import get_db, init_db
-from models import Resume, ResumeAnalysis, Subscription, User
+from models import (
+    PasswordResetToken, Resume, ResumeAnalysis, Subscription, User,
+)
 from resume_parser import extract_skills
 from schemas import (
-    Recommendation, ResumeUploadResponse, Token, UserCreate, UserOut,
+    ForgotPasswordRequest, Recommendation, ResetPasswordRequest,
+    ResumeUploadResponse, Token, UserCreate, UserOut,
 )
 
 load_dotenv()
@@ -210,6 +219,129 @@ def login(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": str(user.id)})
     return Token(access_token=token, user_id=str(user.id))
+
+
+# Generic response for forgot-password — same message whether or not the
+# email exists, so an attacker can't enumerate which addresses are signed up.
+_RESET_RESPONSE = {"message": "If that email exists, a reset link has been sent."}
+
+
+@auth_router.post("/forgot-password")
+@limiter.limit("5/minute")
+def forgot_password(
+    request: Request,
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """Issue a one-time password reset token.
+
+    Always returns the same generic response, regardless of whether the email
+    exists, to prevent account enumeration. When the email is known, a fresh
+    token is generated, all previous tokens for that user are invalidated, and
+    the plaintext token is logged (and would normally be emailed — see comment
+    below).
+    """
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user:
+        # Invalidate any existing unused tokens for this user so only the most
+        # recent link works.
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id
+        ).delete(synchronize_session=False)
+
+        raw_token, token_hash, expires_at = generate_reset_token()
+        db.add(PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        ))
+        db.commit()
+
+        # In production this would be an SES/SendGrid/SMTP call. To keep the
+        # app self-contained and testable without an email provider, we log
+        # the link instead. Swap this for an actual email send when SMTP is
+        # configured.
+        print(
+            f"[reset] Password reset link for {user.email}: "
+            f"/reset-password?token={raw_token}"
+        )
+
+    return _RESET_RESPONSE
+
+
+@auth_router.post("/reset-password")
+def reset_password(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """Consume a reset token and set a new password.
+
+    Validates the token (exists, not expired, hash matches), updates the user's
+    password, and deletes the token so it can't be reused. Any other live
+    tokens for that user are also cleared so the old link stops working too.
+    """
+    if len(payload.new_password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters",
+        )
+
+    # Compute the hash of the incoming token the same way generate_reset_token
+    # stored it (sha256 hex), then look it up.
+    from auth.utils import _hash_reset_token
+    token_hash = _hash_reset_token(payload.token)
+
+    record = (
+        db.query(PasswordResetToken)
+        .filter(PasswordResetToken.token_hash == token_hash)
+        .first()
+    )
+    if not record:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link",
+        )
+
+    # Constant-time check (matches the unique-index lookup above, but kept so
+    # timing-side-channel review is honest if the index ever changes).
+    if not reset_token_matches(payload.token, record.token_hash):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link",
+        )
+
+    # SQLite strips tz info; normalize so the comparison is correct on both
+    # backends.
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        db.delete(record)
+        db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link",
+        )
+
+    user = db.query(User).filter(User.id == record.user_id).first()
+    if not user:
+        # FK cascade should prevent this, but guard anyway.
+        db.delete(record)
+        db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link",
+        )
+
+    user.password_hash = get_password_hash(payload.new_password)
+    # Invalidate ALL reset tokens for this user — the one we just used and any
+    # stragglers from earlier forgot-password calls.
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).delete(synchronize_session=False)
+    db.commit()
+
+    return {"message": "Password updated. You can now sign in."}
 
 
 # ---------------------------------------------------------------------------
