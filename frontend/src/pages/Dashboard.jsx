@@ -978,8 +978,9 @@ export default function Dashboard() {
       const res = await api.get('/api/users/me');
       setUser(res.data);
     } catch {
-      localStorage.removeItem('token');
-      navigate('/login');
+      // 401s are handled globally by the api.js response interceptor,
+      // which redirects to /login and clears the token. Other errors
+      // (network, 5xx) just leave us with a null user below.
     } finally {
       setLoading(false);
     }

@@ -95,9 +95,23 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       clears `uploadError` on retry. Verified `npm run build` clean
       (370 modules, 4.08s) and `grep "alert("` in the file only matches
       the comment in `ErrorBanner`'s docstring.
-- [ ] **8. Global 401 handling** — `frontend/src/lib/api.js` attaches the token but
+- [x] **8. Global 401 handling** — `frontend/src/lib/api.js` attaches the token but
       only Dashboard catches expired sessions; Analyze/SavedAnalysis show generic
       errors. Add a response interceptor → redirect to /login.
+      **Done 2026-08-18** — added a `response.use` interceptor in
+      `frontend/src/lib/api.js` that catches `401`/`403`, clears the
+      stored token, and `window.location.href`-navigates to `/login`.
+      Guards: a `redirecting` module-level flag collapses the burst of
+      parallel 401s that Dashboard's three initial fetches (`/users/me`,
+      `/resumes`, `/analyses`) trigger; an `if (pathname.startsWith('/login'))`
+      early-return keeps Login's inline "Invalid email or password" error
+      working instead of bouncing the user. Dashboard's
+      `fetchUser` catch block lost its now-redundant
+      `localStorage.removeItem('token') + navigate('/login')` and now
+      just lets the interceptor do its job. Analyze and SavedAnalysis
+      inherit the redirect for free (their `err.response?.data?.error`
+      branches continue to surface non-auth errors as before).
+      Verified `npm run build` clean (370 modules, 4.30s).
 - [ ] **9. Password reset / email verification** — accounts are unrecoverable if a
       password is lost.
 - [ ] **10. Resume history comparison** — flat list today; add per-role comparison
