@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Analyze from './pages/Analyze';
 import SavedAnalysis from './pages/SavedAnalysis';
@@ -25,6 +27,8 @@ function AnimatedRoutes() {
       <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
       <Route path="/scan" element={<PageWrapper><PublicScan /></PageWrapper>} />
       <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+      <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+      <Route path="/reset-password" element={<PageWrapper><ResetPassword /></PageWrapper>} />
       <Route path="/dashboard" element={<PageWrapper><Dashboard /></PageWrapper>} />
       <Route path="/analyze/:resumeId" element={<PageWrapper><Analyze /></PageWrapper>} />
       <Route path="/analysis/:analysisId" element={<PageWrapper><SavedAnalysis /></PageWrapper>} />

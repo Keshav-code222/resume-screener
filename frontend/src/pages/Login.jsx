@@ -1,6 +1,6 @@
 // Login / Signup — editorial monograph style, same design tokens as Landing.
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import { colors, fonts, spacing, theme as t } from '../lib/theme';
@@ -227,6 +227,25 @@ export default function Login() {
                   style={{ ...t.input }}
                 />
               </motion.div>
+
+              {!isSignup && (
+                <div style={{ marginTop: -8, textAlign: 'right' }}>
+                  <Link
+                    to="/forgot-password"
+                    style={{
+                      color: colors.textMuted,
+                      fontSize: 12,
+                      fontFamily: fonts.sans,
+                      letterSpacing: '0.04em',
+                      textDecoration: 'none',
+                      borderBottom: `1px solid ${colors.border}`,
+                      paddingBottom: 1,
+                    }}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
 
               <div style={{ marginTop: 8 }}>
                 <FilledButton
