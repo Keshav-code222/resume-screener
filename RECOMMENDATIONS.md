@@ -112,8 +112,30 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       inherit the redirect for free (their `err.response?.data?.error`
       branches continue to surface non-auth errors as before).
       Verified `npm run build` clean (370 modules, 4.30s).
-- [ ] **9. Password reset / email verification** — accounts are unrecoverable if a
+- [x] **9. Password reset / email verification** — accounts are unrecoverable if a
       password is lost.
+      **Done 2026-08-25** — backend `POST /api/auth/forgot-password` and
+      `POST /api/auth/reset-password` in `backend/main.py`; the `PasswordResetToken`
+      model (`backend/models.py`) stores a SHA-256 hash of the random token
+      (never the raw token) and cascades to user deletes; helpers in
+      `backend/auth/utils.py` (`_hash_reset_token`, `generate_reset_token`,
+      `reset_token_matches`) do the constant-time compare. Forgot-password
+      always returns the same 200 body whether the email exists (no
+      account enumeration), invalidates all prior tokens for the user on
+      a fresh request, and is slowapi-limited to 5/min. Reset enforces
+      6-char minimum, single-use (consumed row is deleted), and the
+      generic `Invalid or expired reset link` 400 covers both bogus and
+      expired tokens. Frontend `ForgotPassword.jsx` and `ResetPassword.jsx`
+      in `frontend/src/pages/` are routed at `/forgot-password` and
+      `/reset-password` (`App.jsx`); the Login page adds a `Forgot password?`
+      link, the reset page reads the token from `?token=…`, and both
+      share the editorial gold/dark palette of the Login page. Email
+      delivery is stubbed via `print()` (no SMTP in the repo); swap for
+      SES/SendGrid when configured. Verified locally with
+      `backend/test_password_reset.py` 27/27 pass (no enumeration, valid
+      reset, single-use, prior-token invalidation on re-forgot, expiry
+      cleanup, short-password rejection) and `npm run build` clean
+      (372 modules, 3.72s).
 - [ ] **10. Resume history comparison** — flat list today; add per-role comparison
       view (which skills valued where).
 
