@@ -59,6 +59,13 @@ class CreateAnalysisRequest(BaseModel):
     job_description: str
 
 
+class CompareAnalysesRequest(BaseModel):
+    """Body for POST /api/analyses/compare — 2-6 analysis ids the current
+    user owns. Returns a side-by-side view (scores + per-role missing-skill
+    matrix) for the Dashboard history comparison panel."""
+    analysis_ids: List[str]
+
+
 class AnalysisOut(BaseModel):
     analysis_id: Optional[str] = None
     resume_id: Optional[str] = None

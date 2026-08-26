@@ -700,6 +700,152 @@ def get_analysis(
     }
 
 
+@analysis_router.post("/compare")
+def compare_analyses(
+    payload: dict,  # {"analysis_ids": ["<id>", ...]}
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return a side-by-side comparison of two or more analyses owned by the
+    current user. Builds a per-role view the Dashboard uses to show "which
+    skills are valued where" — each analysis is its own role, scored
+    independently against the same resume.
+
+    Body: { "analysis_ids": ["<id>", "<id>", ...] }   (min 2, max 6)
+
+    Response:
+      {
+        "analyses": [
+          {
+            "id": "...",
+            "job_title": "...",
+            "match_score": 72.5,
+            "missing_skills": ["..."],
+            "verdict": "...",
+            "generated_at": "...",
+            "resume_id": "...",
+            "resume_file_name": "..."
+          },
+          ...
+        ],
+        "skill_matrix": [
+          {
+            "skill": "kubernetes",
+            "missing_in": ["<analysis_id>", ...]   // which roles flagged it as missing
+          },
+          ...
+        ]
+      }
+
+    Ownership: every id must belong to the current user; if any do not, 404
+    (same as the rest of the API — don't leak existence).
+    """
+    ids = payload.get("analysis_ids")
+    if not isinstance(ids, list) or len(ids) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="analysis_ids must be a list of at least 2 ids",
+        )
+    if len(ids) > 6:
+        raise HTTPException(
+            status_code=400,
+            detail="compare at most 6 analyses at once",
+        )
+    # Dedupe while preserving order, so duplicate ids don't break the matrix.
+    seen = set()
+    unique_ids = []
+    for aid in ids:
+        if not isinstance(aid, str) or not aid:
+            raise HTTPException(
+                status_code=400, detail="analysis_ids must be non-empty strings"
+            )
+        if aid not in seen:
+            seen.add(aid)
+            unique_ids.append(aid)
+    if len(unique_ids) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="need at least 2 distinct analyses to compare",
+        )
+
+    def _maybe_load(value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                return value
+        return value
+
+    rows = (
+        db.query(ResumeAnalysis, Resume.file_name)
+        .join(Resume, ResumeAnalysis.resume_id == Resume.id)
+        .filter(
+            ResumeAnalysis.id.in_(unique_ids),
+            Resume.user_id == current.id,
+        )
+        .all()
+    )
+    if len(rows) != len(unique_ids):
+        # Some ids were missing or not owned by this user.
+        raise HTTPException(
+            status_code=404,
+            detail="One or more analyses not found",
+        )
+
+    # Build the response in the order the client requested (so the columns in
+    # the matrix line up with the cards the user just clicked).
+    by_id = {str(a.id): (a, fname) for a, fname in rows}
+    analyses_out = []
+    missing_by_id = {}
+    for aid in unique_ids:
+        a, fname = by_id[aid]
+        missing = _maybe_load(a.missing_skills) or []
+        if not isinstance(missing, list):
+            missing = []
+        # Normalize: lowercase, strip, drop empties — so "Kubernetes" and
+        # "kubernetes" count as the same skill in the matrix.
+        normalized = []
+        for s in missing:
+            if not isinstance(s, str):
+                continue
+            n = s.strip().lower()
+            if n and n not in normalized:
+                normalized.append(n)
+        missing_by_id[aid] = normalized
+        analyses_out.append({
+            "id": aid,
+            "resume_id": str(a.resume_id),
+            "resume_file_name": fname,
+            "job_title": a.job_title or "Untitled role",
+            "match_score": float(a.match_score or 0),
+            "missing_skills": missing,
+            "verdict": a.verdict or "",
+            "generated_at": a.generated_at.isoformat() if a.generated_at else None,
+        })
+
+    # Build the skill matrix: every distinct missing skill across the
+    # selected analyses, sorted by how many roles flagged it (desc) so the
+    # "most universally required" skills surface first.
+    counts: dict[str, int] = {}
+    for skills in missing_by_id.values():
+        for s in skills:
+            counts[s] = counts.get(s, 0) + 1
+    # Stable secondary sort by skill name so ties don't reshuffle on every
+    # request.
+    sorted_skills = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    skill_matrix = [
+        {
+            "skill": skill,
+            "missing_in": [
+                aid for aid in unique_ids if skill in missing_by_id[aid]
+            ],
+        }
+        for skill, _ in sorted_skills
+    ]
+
+    return {"analyses": analyses_out, "skill_matrix": skill_matrix}
+
+
 @analysis_router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_analysis(
     analysis_id: str,
@@ -743,6 +889,7 @@ def root():
             "DELETE /api/resumes/{id}",
             "POST /api/analyses",
             "GET  /api/analyses",
+            "POST /api/analyses/compare",
             "GET  /api/analyses/{id}",
             "DELETE /api/analyses/{id}",
         ],

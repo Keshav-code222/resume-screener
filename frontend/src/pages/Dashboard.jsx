@@ -356,7 +356,17 @@ function ResumesList({ resumes, onAnalyze, onDelete, onPreview, onDownload }) {
 }
 
 // ── History List ─────────────────────────────────────────────────────────
-function HistoryList({ analyses, onView, onDelete }) {
+// Adds a "compare" affordance: a per-row checkbox plus a select-all header.
+// When 2+ rows are selected, the parent shows a CompareBar that fetches
+// /api/analyses/compare and renders the side-by-side view.
+function HistoryList({
+  analyses,
+  onView,
+  onDelete,
+  selectedIds = [],
+  onToggle,
+  onToggleAll,
+}) {
   if (analyses.length === 0) {
     return (
       <div
@@ -373,10 +383,61 @@ function HistoryList({ analyses, onView, onDelete }) {
     );
   }
 
+  const allSelected =
+    analyses.length > 0 && selectedIds.length === analyses.length;
+  const someSelected =
+    selectedIds.length > 0 && selectedIds.length < analyses.length;
+
   return (
     <div style={{ border: `1px solid ${colors.border}` }}>
+      {/* Select-all header — only meaningful when compare is wired up. */}
+      {onToggle && onToggleAll && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '32px 90px 1fr 120px 90px 90px',
+            gap: 16,
+            alignItems: 'center',
+            padding: '10px 24px',
+            borderBottom: `1px solid ${colors.border}`,
+            background: colors.elevated,
+            color: colors.textDim,
+            fontFamily: fonts.sans,
+            fontSize: 10,
+            fontWeight: 500,
+            letterSpacing: '0.24em',
+            textTransform: 'uppercase',
+          }}
+        >
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+            title={allSelected ? 'Deselect all' : 'Select all'}
+          >
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = someSelected;
+              }}
+              onChange={onToggleAll}
+              style={{ accentColor: colors.gold, cursor: 'pointer' }}
+            />
+          </label>
+          <span style={{ gridColumn: 'span 2' }}>
+            {selectedIds.length > 0
+              ? `${selectedIds.length} selected for compare`
+              : 'Select rows to compare'}
+          </span>
+        </div>
+      )}
       {analyses.map((a, i) => {
         const score = Math.round(Number(a.match_score || 0));
+        const isSelected = selectedIds.includes(a.id);
         return (
           <motion.div
             key={a.id}
@@ -386,23 +447,44 @@ function HistoryList({ analyses, onView, onDelete }) {
             onClick={() => onView(a)}
             style={{
               display: 'grid',
-              gridTemplateColumns: '90px 1fr 120px 90px 90px',
+              gridTemplateColumns: '32px 90px 1fr 120px 90px 90px',
               gap: 16,
               alignItems: 'center',
               padding: '16px 24px',
               borderBottom:
                 i < analyses.length - 1 ? `1px solid ${colors.border}` : 'none',
-              background: colors.card,
+              background: isSelected ? colors.goldBg : colors.card,
               cursor: 'pointer',
               transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = colors.elevated)
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = colors.card)
-            }
+            onMouseEnter={(e) => {
+              if (!isSelected) e.currentTarget.style.background = colors.elevated;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = isSelected
+                ? colors.goldBg
+                : colors.card;
+            }}
           >
+            {/* Compare checkbox */}
+            {onToggle && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle(a.id);
+                }}
+                style={{ display: 'flex', justifyContent: 'center' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onToggle(a.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ accentColor: colors.gold, cursor: 'pointer' }}
+                  aria-label={`Select ${a.job_title || 'analysis'} for compare`}
+                />
+              </div>
+            )}
             {/* Score */}
             <div>
               <span
@@ -509,6 +591,419 @@ function HistoryList({ analyses, onView, onDelete }) {
     </div>
   );
 }
+
+// ── Compare Bar ──────────────────────────────────────────────────────────
+// Sticky bar that appears when the user has selected 2+ analyses. Lives
+// inside the main column, not as a floating overlay, so it scrolls with the
+// list and never blocks the delete button on the right.
+function CompareBar({ count, max, busy, onCompare, onClear }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        padding: '12px 20px',
+        background: colors.elevated,
+        border: `1px solid ${colors.goldBorder}`,
+        marginBottom: 16,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontFamily: fonts.sans,
+          fontSize: 13,
+          color: colors.creamDim,
+        }}
+      >
+        {count} of {max} selected
+        {count > max && (
+          <span style={{ color: colors.warningText, marginLeft: 8 }}>
+            (compare at most {max})
+          </span>
+        )}
+      </p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <GhostButton small onClick={onClear} disabled={busy}>
+          Clear
+        </GhostButton>
+        <FilledButton
+          small
+          onClick={onCompare}
+          disabled={busy || count < 2 || count > max}
+        >
+          {busy ? 'Comparing…' : 'Compare selected'}
+        </FilledButton>
+      </div>
+    </motion.div>
+  );
+}
+
+
+// ── Compare View ────────────────────────────────────────────────────────
+// Side-by-side comparison of 2-6 analyses the user picked from history.
+// Layout: a horizontal scroll of "role cards" on top (score bar, verdict,
+// open link) and a missing-skill matrix below — rows are unique skills
+// flagged as missing across any selected analysis, columns are roles, cells
+// show a gold tick if that role required the skill (i.e. it's missing from
+// the resume for that role). The matrix is the actual "which skills are
+// valued where" answer the user came for.
+function CompareView({ data, onClose, onOpen, onDelete }) {
+  if (!data) return null;
+  const { analyses, skill_matrix } = data;
+  const totalRoles = analyses.length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        border: `1px solid ${colors.border}`,
+        background: colors.card,
+        marginBottom: 32,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 24px',
+          borderBottom: `1px solid ${colors.border}`,
+        }}
+      >
+        <div>
+          <p style={{ ...t.label, margin: 0, color: colors.gold }}>
+            Comparison
+          </p>
+          <p
+            style={{
+              fontFamily: fonts.serif,
+              fontSize: 18,
+              color: colors.cream,
+              margin: '4px 0 0',
+              fontWeight: 500,
+            }}
+          >
+            {totalRoles} roles · {skill_matrix.length} unique gaps
+          </p>
+        </div>
+        <GhostButton small onClick={onClose}>
+          ← Back to history
+        </GhostButton>
+      </div>
+
+      {/* Role cards — horizontal scroll so 3+ roles don't squish */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: `1px solid ${colors.border}`,
+          overflowX: 'auto',
+        }}
+      >
+        {analyses.map((a, i) => {
+          const score = Math.round(Number(a.match_score || 0));
+          return (
+            <div
+              key={a.id}
+              style={{
+                flex: `0 0 ${Math.max(280, 100 / totalRoles * 100)}%`,
+                minWidth: 280,
+                padding: '20px 24px',
+                borderRight:
+                  i < analyses.length - 1
+                    ? `1px solid ${colors.border}`
+                    : 'none',
+                background: colors.card,
+                boxSizing: 'border-box',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontFamily: fonts.sans,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  color: colors.gold,
+                }}
+              >
+                Role {i + 1}
+              </p>
+              <p
+                style={{
+                  fontFamily: fonts.serif,
+                  fontSize: 18,
+                  fontWeight: 500,
+                  color: colors.cream,
+                  margin: '4px 0 8px',
+                  lineHeight: 1.2,
+                }}
+              >
+                {a.job_title || 'Untitled role'}
+              </p>
+              <p
+                style={{
+                  ...t.caption,
+                  margin: 0,
+                  color: colors.textDim,
+                }}
+              >
+                {a.generated_at
+                  ? new Date(a.generated_at).toLocaleDateString()
+                  : '—'}
+              </p>
+
+              {/* Score */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 6,
+                  margin: '16px 0 8px',
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: fonts.serif,
+                    fontSize: 36,
+                    fontWeight: 500,
+                    color: colors.cream,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1,
+                  }}
+                >
+                  {score}
+                </span>
+                <span style={{ ...t.caption, fontSize: 13 }}>%</span>
+              </div>
+              <div style={t.progressTrack}>
+                <div style={t.progressFill(score)} />
+              </div>
+
+              {/* Verdict */}
+              {a.verdict && (
+                <p
+                  style={{
+                    fontFamily: fonts.sans,
+                    fontSize: 12,
+                    color: colors.textMuted,
+                    lineHeight: 1.5,
+                    margin: '12px 0 0',
+                  }}
+                >
+                  {a.verdict}
+                </p>
+              )}
+
+              {/* Actions */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  marginTop: 16,
+                  alignItems: 'center',
+                }}
+              >
+                <button
+                  onClick={() => onOpen(a.id)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: colors.gold,
+                    fontFamily: fonts.sans,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    padding: 0,
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = colors.goldLight)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = colors.gold)
+                  }
+                >
+                  Open →
+                </button>
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(a)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: colors.textDim,
+                      fontFamily: fonts.sans,
+                      fontSize: 11,
+                      fontWeight: 500,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      padding: 0,
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = colors.creamDim)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.color = colors.textDim)
+                    }
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Skill matrix */}
+      <div style={{ padding: '20px 24px 24px' }}>
+        <p
+          style={{
+            ...t.label,
+            margin: '0 0 4px',
+          }}
+        >
+          Missing-skill matrix
+        </p>
+        <p
+          style={{
+            ...t.caption,
+            margin: '0 0 16px',
+          }}
+        >
+          Sorted by how broadly each skill is required across the selected
+          roles — the top of the list is universally demanded, the bottom is
+          niche to one or two.
+        </p>
+        {skill_matrix.length === 0 ? (
+          <p
+            style={{
+              ...t.body,
+              margin: 0,
+              color: colors.successText,
+            }}
+          >
+            None of these roles flagged any missing skills.
+          </p>
+        ) : (
+          <div
+            style={{
+              border: `1px solid ${colors.border}`,
+              overflowX: 'auto',
+            }}
+          >
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontFamily: fonts.sans,
+                fontSize: 13,
+              }}
+            >
+              <thead>
+                <tr style={{ background: colors.elevated }}>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      padding: '10px 16px',
+                      fontWeight: 500,
+                      fontSize: 10,
+                      letterSpacing: '0.24em',
+                      textTransform: 'uppercase',
+                      color: colors.gold,
+                      borderBottom: `1px solid ${colors.border}`,
+                      minWidth: 200,
+                    }}
+                  >
+                    Skill
+                  </th>
+                  {analyses.map((a, i) => (
+                    <th
+                      key={a.id}
+                      title={a.job_title || `Role ${i + 1}`}
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 500,
+                        fontSize: 11,
+                        color: colors.creamDim,
+                        borderBottom: `1px solid ${colors.border}`,
+                        borderLeft: `1px solid ${colors.border}`,
+                        textAlign: 'center',
+                        maxWidth: 160,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {a.job_title || `Role ${i + 1}`}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {skill_matrix.map((row, i) => (
+                  <tr
+                    key={row.skill}
+                    style={{
+                      background: i % 2 === 0 ? colors.card : colors.elevated,
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: '10px 16px',
+                        color: colors.creamDim,
+                        borderBottom: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      {row.skill}
+                    </td>
+                    {analyses.map((a) => {
+                      const isMissing = row.missing_in.includes(a.id);
+                      return (
+                        <td
+                          key={a.id}
+                          style={{
+                            padding: '10px 12px',
+                            textAlign: 'center',
+                            borderBottom: `1px solid ${colors.border}`,
+                            borderLeft: `1px solid ${colors.border}`,
+                            color: isMissing ? colors.gold : colors.textDim,
+                            fontSize: 14,
+                          }}
+                          title={
+                            isMissing
+                              ? 'Required by this role but missing from your resume'
+                              : 'Not flagged by this role'
+                          }
+                        >
+                          {isMissing ? '✕' : '—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 
 // ── Preview Modal ────────────────────────────────────────────────────────
 // Inline PDF preview rendered in an iframe. We can't point the iframe at the
@@ -956,6 +1451,15 @@ export default function Dashboard() {
   // actions like download / delete that shouldn't block the next click.
   const [uploadError, setUploadError] = useState('');
   const [flashError, setFlashError] = useState('');
+  // Per-role comparison (item #10 in RECOMMENDATIONS.md). `selectedIds` is
+  // the working set the user builds with the checkboxes; `compareData` is
+  // the materialized result from /api/analyses/compare that drives the
+  // side-by-side view. Compare is opt-in: leaving the history tab clears
+  // the selection so it doesn't leak into a different visit.
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [compareData, setCompareData] = useState(null);
+  const [compareBusy, setCompareBusy] = useState(false);
+  const COMPARE_MAX = 6;
   const navigate = useNavigate();
 
   // Show a transient banner (download/delete) and clear it on its own so
@@ -1086,6 +1590,52 @@ export default function Dashboard() {
     setPendingDelete(null);
   };
 
+  // ── Compare selection ────────────────────────────────────────────────
+  // Toggle one id in/out of the working set. The list caps at COMPARE_MAX
+  // (server enforces the same bound), so a full list silently no-ops further
+  // toggles — friendlier than a JS alert.
+  const toggleCompare = (id) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= COMPARE_MAX) return prev;
+      return [...prev, id];
+    });
+  };
+  const toggleAllCompare = () => {
+    if (selectedIds.length === analyses.length) {
+      setSelectedIds([]);
+    } else {
+      // Keep only the first COMPARE_MAX so we don't silently over-select.
+      setSelectedIds(analyses.slice(0, COMPARE_MAX).map((a) => a.id));
+    }
+  };
+  const clearCompare = () => {
+    setSelectedIds([]);
+    setCompareData(null);
+  };
+  const runCompare = async () => {
+    if (selectedIds.length < 2) return;
+    setCompareBusy(true);
+    try {
+      const res = await api.post('/api/analyses/compare', {
+        analysis_ids: selectedIds,
+      });
+      setCompareData(res.data);
+    } catch (err) {
+      setFlashError(
+        'Compare failed: ' +
+          (err.response?.data?.detail ||
+            err.response?.data?.error ||
+            'Unknown error')
+      );
+    } finally {
+      setCompareBusy(false);
+    }
+  };
+  const closeCompare = () => {
+    setCompareData(null);
+  };
+
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     const { kind, target } = pendingDelete;
@@ -1101,6 +1651,26 @@ export default function Dashboard() {
       } else if (kind === 'analysis') {
         await api.delete(`/api/analyses/${target.id}`);
         setAnalyses((prev) => prev.filter((a) => a.id !== target.id));
+        // If the user had picked this analysis for compare, drop it from
+        // both the working set and the materialized comparison so the
+        // side-by-side view doesn't show a ghost column.
+        setSelectedIds((prev) => prev.filter((id) => id !== target.id));
+        setCompareData((prev) =>
+          prev
+            ? {
+                ...prev,
+                analyses: prev.analyses.filter((a) => a.id !== target.id),
+                skill_matrix: prev.skill_matrix
+                  .map((row) => ({
+                    ...row,
+                    missing_in: row.missing_in.filter(
+                      (id) => id !== target.id
+                    ),
+                  }))
+                  .filter((row) => row.missing_in.length > 0),
+              }
+            : prev
+        );
       }
       setPendingDelete(null);
     } catch (err) {
@@ -1262,12 +1832,37 @@ export default function Dashboard() {
         {active === 'history' && (
           <div>
             <p style={{ ...t.label, marginBottom: 16 }}>Past Analyses</p>
+            {/* CompareView renders above the list when a result is loaded,
+                so the user can scroll between the side-by-side view and
+                the underlying rows. */}
+            <AnimatePresence>
+              {compareData && (
+                <CompareView
+                  data={compareData}
+                  onClose={closeCompare}
+                  onOpen={(id) => navigate(`/analysis/${id}`)}
+                  onDelete={askDeleteAnalysis}
+                />
+              )}
+            </AnimatePresence>
+            {selectedIds.length > 0 && !compareData && (
+              <CompareBar
+                count={selectedIds.length}
+                max={COMPARE_MAX}
+                busy={compareBusy}
+                onCompare={runCompare}
+                onClear={clearCompare}
+              />
+            )}
             <HistoryList
               analyses={analyses}
               onView={(a) => {
                 if (a.id) navigate(`/analysis/${a.id}`);
               }}
               onDelete={askDeleteAnalysis}
+              selectedIds={selectedIds}
+              onToggle={toggleCompare}
+              onToggleAll={toggleAllCompare}
             />
           </div>
         )}
