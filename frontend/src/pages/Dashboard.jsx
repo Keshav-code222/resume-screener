@@ -751,6 +751,26 @@ function CompareView({ data, onClose, onOpen, onDelete }) {
               >
                 {a.job_title || 'Untitled role'}
               </p>
+              {/* Resume variant used for this analysis — the whole point of
+                  comparing roles is to see "which skills are valued where",
+                  so the user needs to know which resume variant produced
+                  each row's score. */}
+              {a.resume_file_name && (
+                <p
+                  title={`Resume used: ${a.resume_file_name}`}
+                  style={{
+                    fontFamily: fonts.sans,
+                    fontSize: 11,
+                    color: colors.textMuted,
+                    margin: '0 0 4px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  ↳ {a.resume_file_name}
+                </p>
+              )}
               <p
                 style={{
                   ...t.caption,
@@ -1845,6 +1865,25 @@ export default function Dashboard() {
                 />
               )}
             </AnimatePresence>
+            {/* First-time discoverability hint for the comparison feature
+                (#10). Only renders when there's enough history to make
+                compare meaningful AND no selection is in progress, so we
+                don't pile hints on top of an active selection. */}
+            {analyses.length >= 2 &&
+              selectedIds.length === 0 &&
+              !compareData && (
+                <p
+                  style={{
+                    fontFamily: fonts.sans,
+                    fontSize: 12,
+                    color: colors.textMuted,
+                    marginBottom: 12,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Tip: tick 2 or more rows to compare roles side-by-side.
+                </p>
+              )}
             {selectedIds.length > 0 && !compareData && (
               <CompareBar
                 count={selectedIds.length}

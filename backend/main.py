@@ -49,8 +49,8 @@ from models import (
 )
 from resume_parser import extract_skills
 from schemas import (
-    ForgotPasswordRequest, Recommendation, ResetPasswordRequest,
-    ResumeUploadResponse, Token, UserCreate, UserOut,
+    CompareAnalysesRequest, ForgotPasswordRequest, Recommendation,
+    ResetPasswordRequest, ResumeUploadResponse, Token, UserCreate, UserOut,
 )
 
 load_dotenv()
@@ -702,7 +702,7 @@ def get_analysis(
 
 @analysis_router.post("/compare")
 def compare_analyses(
-    payload: dict,  # {"analysis_ids": ["<id>", ...]}
+    payload: CompareAnalysesRequest,
     current: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -740,8 +740,8 @@ def compare_analyses(
     Ownership: every id must belong to the current user; if any do not, 404
     (same as the rest of the API — don't leak existence).
     """
-    ids = payload.get("analysis_ids")
-    if not isinstance(ids, list) or len(ids) < 2:
+    ids = payload.analysis_ids
+    if len(ids) < 2:
         raise HTTPException(
             status_code=400,
             detail="analysis_ids must be a list of at least 2 ids",
@@ -755,10 +755,6 @@ def compare_analyses(
     seen = set()
     unique_ids = []
     for aid in ids:
-        if not isinstance(aid, str) or not aid:
-            raise HTTPException(
-                status_code=400, detail="analysis_ids must be non-empty strings"
-            )
         if aid not in seen:
             seen.add(aid)
             unique_ids.append(aid)
