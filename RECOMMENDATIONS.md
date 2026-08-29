@@ -145,8 +145,9 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ## 🟡 AI analysis quality
 
-- [ ] **11. Upgrade the model** — `backend/ai.py:57` uses `llama-3.1-8b-instant`
+- [x] **11. Upgrade the model** — `backend/ai.py:57` uses `llama-3.1-8b-instant`
       (weak/old). Prefer a current Groq model (e.g. llama-3.3-70b).
+      **Done 2026-08-29** — Updated to `llama-3.3-70b-versatile`.
 - [ ] **12. Use `response_format={"type": "json_object"}`** — `backend/ai.py:65`
       scrapes JSON with a greedy regex; force JSON output for deterministic parsing.
 - [ ] **13. Normalize the LLM response** — fill missing keys

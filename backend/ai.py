@@ -54,7 +54,7 @@ Return ONLY a valid JSON object matching this exact structure (do not include th
 
         _log("Calling Groq API...")
         message = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
         )
