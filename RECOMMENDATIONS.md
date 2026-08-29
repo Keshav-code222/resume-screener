@@ -136,8 +136,12 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       reset, single-use, prior-token invalidation on re-forgot, expiry
       cleanup, short-password rejection) and `npm run build` clean
       (372 modules, 3.72s).
-- [ ] **10. Resume history comparison** — flat list today; add per-role comparison
+- [x] **10. Resume history comparison** — flat list today; add per-role comparison
       view (which skills valued where).
+      **Done 2026-08-29** — The frontend `Dashboard.jsx` handles side-by-side
+      comparison of 2-6 roles, generating a matrix of missing skills ranked
+      by how broadly they are required. The backend `POST /api/analyses/compare`
+      powers this view. Tests in `test_compare_endpoint.py` pass 100%.
 
 ## 🟡 AI analysis quality
 

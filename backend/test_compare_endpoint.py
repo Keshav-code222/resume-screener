@@ -168,13 +168,13 @@ resume_b = upload(tok_b, "bob.pdf")
 # Create analyses with varied missing skills. The matrix ordering test
 # depends on these counts (across backend-dev + sre):
 #   "kubernetes" -> 2 (backend-dev, sre)
-#   "python"      -> 2 (backend-dev, data-eng)
+#   "python"      -> 1 (backend-dev only)
 #   "aws"         -> 1 (sre only)
 #   "go"          -> 1 (backend-dev only)
 #   "terraform"   -> 1 (sre only)
-# Kubernetes + python tie at the top; secondary sort by skill name (a < g
-# < k < p < t alphabetically) so aws, go, kubernetes, python, terraform
-# after the count-desc tiebreaker between kubernetes and python.
+# Kubernetes is top; secondary sort by skill name (a < g
+# < k < p < t alphabetically) so aws, go, python, terraform
+# after kubernetes.
 analysis_backend = analyze_with_skills(
     tok_a, resume_a1, "Backend Dev",
     ["Kubernetes", "python", "Go"],
@@ -220,12 +220,12 @@ check("resume_file_name present on each role",
 print("[2] Skill matrix ordering + normalization")
 matrix = data.get("skill_matrix", [])
 check("matrix has 5 unique skills", len(matrix) == 5, f"got {len(matrix)}")
-# Counts: kubernetes=2, python=2, aws=1, go=1, terraform=1
-# After count-desc tiebreaker: kubernetes + python first (both 2),
-# then the count-1 rows alphabetically (aws, go, terraform).
+# Counts: kubernetes=2, aws=1, go=1, python=1, terraform=1
+# After count-desc tiebreaker: kubernetes first (2),
+# then the count-1 rows alphabetically (aws, go, python, terraform).
 check("matrix sorted by count desc, name asc",
       [m["skill"] for m in matrix]
-      == ["kubernetes", "python", "aws", "go", "terraform"],
+      == ["kubernetes", "aws", "go", "python", "terraform"],
       f"got {[m['skill'] for m in matrix]}")
 # Kubernetes was capitalized in backend but lower in sre — should dedupe.
 check("kubernetes (mixed case) merges into one row",
@@ -311,7 +311,7 @@ for i in range(6):
 # Now bob has 7 analyses total (1 original + 6 new).
 r = client.post(
     "/api/analyses/compare",
-    json={"analysis_ids": bob_analyses[:7]},
+    json={"analysis_ids": [analysis_bob] + bob_analyses},
     headers=auth(tok_b),
 )
 check("7 distinct ids -> 400 (over max)", r.status_code == 400,
