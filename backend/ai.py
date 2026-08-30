@@ -57,19 +57,20 @@ Return ONLY a valid JSON object matching this exact structure (do not include th
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
+            response_format={"type": "json_object"},
         )
 
         response_text = message.choices[0].message.content
         _log(f"Response received ({len(response_text)} chars)")
 
-        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group())
+        try:
+            parsed = json.loads(response_text)
             _log(f"Score: {parsed.get('overall_score')}")
             return parsed
-
-        _log("No JSON found in response, using default analysis")
-        return default_analysis(resume_text, job_description)
+        except json.JSONDecodeError as e:
+            _log(f"JSON decode error: {e}")
+            _log("Using default analysis")
+            return default_analysis(resume_text, job_description)
 
     except Exception as e:
         _log(f"Error: {e}")
