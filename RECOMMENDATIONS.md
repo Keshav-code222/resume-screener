@@ -151,8 +151,10 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 - [x] **12. Use `response_format={"type": "json_object"}`** — `backend/ai.py:65`
       scrapes JSON with a greedy regex; force JSON output for deterministic parsing.
       **Done 2026-08-30** — Updated `backend/ai.py` to use `response_format={"type": "json_object"}` and removed regex scraping.
-- [ ] **13. Normalize the LLM response** — fill missing keys
+- [x] **13. Normalize the LLM response** — fill missing keys
       (score/missing/suggestions/verdict) with defaults + clamp score 0–100.
+      **Done 2026-08-31** — added `_normalize_analysis` helper in `backend/ai.py`
+      to ensure consistent response shape and clamped scoring.
 - [ ] **14. Smarter input truncation** — `backend/ai.py:42-45` cuts resume/JD at
       2000 chars mid-sentence.
 - [ ] **15. Structured recommendations** — `backend/main.py:294` flattens every

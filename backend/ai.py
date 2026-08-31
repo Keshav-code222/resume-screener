@@ -22,6 +22,34 @@ def _log(msg: str) -> None:
         print(f"[ai] {safe}")
 
 
+def _normalize_analysis(data: dict) -> dict:
+    """Normalize AI analysis response: fill missing keys and clamp score."""
+    try:
+        score = int(data.get("overall_score", 0))
+        score = max(0, min(100, score))
+    except (ValueError, TypeError):
+        score = 0
+
+    missing = data.get("missing_keywords")
+    if not isinstance(missing, list):
+        missing = []
+
+    suggestions = data.get("top_suggestions")
+    if not isinstance(suggestions, list):
+        suggestions = []
+
+    verdict = data.get("verdict")
+    if not isinstance(verdict, str):
+        verdict = "No assessment available."
+
+    return {
+        "overall_score": score,
+        "missing_keywords": missing,
+        "top_suggestions": suggestions,
+        "verdict": verdict,
+    }
+
+
 def analyze_resume(resume_text: str, job_description: str) -> dict:
     """Analyze resume using Groq API. Returns a dict with overall_score,
     missing_keywords, top_suggestions, and verdict."""
@@ -65,8 +93,9 @@ Return ONLY a valid JSON object matching this exact structure (do not include th
 
         try:
             parsed = json.loads(response_text)
-            _log(f"Score: {parsed.get('overall_score')}")
-            return parsed
+            normalized = _normalize_analysis(parsed)
+            _log(f"Score: {normalized['overall_score']}")
+            return normalized
         except json.JSONDecodeError as e:
             _log(f"JSON decode error: {e}")
             _log("Using default analysis")
