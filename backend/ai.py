@@ -50,7 +50,33 @@ def _normalize_analysis(data: dict) -> dict:
     }
 
 
+def _smart_truncate(text: str, max_length: int) -> str:
+    """Truncate text to max_length, attempting to cut at sentence or word boundaries."""
+    if len(text) <= max_length:
+        return text
+
+    truncated = text[:max_length]
+
+    # Try to find the last sentence boundary within the last 200 characters
+    window_start = max(0, max_length - 200)
+    # Find all positions of sentence endings (. ! ?) followed by whitespace or end of string
+    endings = [m.start() + 1 for m in re.finditer(r'[.!?](\s|$)', truncated)]
+
+    if endings:
+        # The last ending found is the best sentence boundary
+        return truncated[:endings[-1]].rstrip()
+
+    # Fallback: Find the last whitespace
+    last_space = truncated.rfind(' ')
+    if last_space != -1:
+        return truncated[:last_space].rstrip()
+
+    # Hard limit fallback
+    return truncated.rstrip()
+
+
 def analyze_resume(resume_text: str, job_description: str) -> dict:
+
     """Analyze resume using Groq API. Returns a dict with overall_score,
     missing_keywords, top_suggestions, and verdict."""
     if not GROQ_API_KEY:
@@ -67,10 +93,10 @@ Analyze this resume against the job description and provide a highly accurate as
 Calculate a realistic overall match score from 0 to 100 based on how well the candidate's skills and experience align with the job requirements.
 
 RESUME:
-{resume_text[:2000]}
+{_smart_truncate(resume_text, 4000)}
 
 JOB DESCRIPTION:
-{job_description[:2000]}
+{_smart_truncate(job_description, 4000)}
 
 Return ONLY a valid JSON object matching this exact structure (do not include the schema keys, use actual calculated values instead):
 {{

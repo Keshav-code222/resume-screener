@@ -155,8 +155,10 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       (score/missing/suggestions/verdict) with defaults + clamp score 0–100.
       **Done 2026-08-31** — added `_normalize_analysis` helper in `backend/ai.py`
       to ensure consistent response shape and clamped scoring.
-- [ ] **14. Smarter input truncation** — `backend/ai.py:42-45` cuts resume/JD at
+- [x] **14. Smarter input truncation** — `backend/ai.py:42-45` cuts resume/JD at
       2000 chars mid-sentence.
+      **Done 2026-09-01** — Implemented `_smart_truncate` helper to cut at sentence
+      or word boundaries and increased limit to 4000 characters.
 - [ ] **15. Structured recommendations** — `backend/main.py:294` flattens every
       suggestion to content/high. Have the model return typed recs
       (strength/gap/action, priority).
