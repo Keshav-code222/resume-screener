@@ -47,10 +47,10 @@ class ResumeUploadResponse(BaseModel):
 
 # ----- Analyses -----
 class Recommendation(BaseModel):
-    type: str = "content"
-    priority: str = "high"
+    type: str # "strength", "gap", "action"
+    priority: str # "low", "medium", "high"
     text: str
-    action: str = "Update resume"
+    action: Optional[str] = None
 
 
 class CreateAnalysisRequest(BaseModel):

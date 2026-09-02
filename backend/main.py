@@ -556,10 +556,13 @@ def download_resume(
 analysis_router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 
 
-def _to_recommendations(suggestions: List[str]) -> List[Recommendation]:
+def _to_recommendations(suggestions: List[dict]) -> List[Recommendation]:
     return [
         Recommendation(
-            type="content", priority="high", text=s, action="Update resume"
+            type=s.get("type", "gap"),
+            priority=s.get("priority", "medium"),
+            text=s.get("text", ""),
+            action=s.get("action", "Update resume")
         )
         for s in suggestions
     ]

@@ -38,6 +38,25 @@ def _normalize_analysis(data: dict) -> dict:
     if not isinstance(suggestions, list):
         suggestions = []
 
+    # Ensure each suggestion is a dict with required keys
+    normalized_suggestions = []
+    for s in suggestions:
+        if isinstance(s, dict):
+            normalized_suggestions.append({
+                "type": s.get("type", "gap"),
+                "priority": s.get("priority", "medium"),
+                "text": s.get("text", ""),
+                "action": s.get("action", "Update resume")
+            })
+        elif isinstance(s, str):
+            # Fallback for old format or unexpected strings
+            normalized_suggestions.append({
+                "type": "gap",
+                "priority": "medium",
+                "text": s,
+                "action": "Update resume"
+            })
+
     verdict = data.get("verdict")
     if not isinstance(verdict, str):
         verdict = "No assessment available."
@@ -58,7 +77,6 @@ def _smart_truncate(text: str, max_length: int) -> str:
     truncated = text[:max_length]
 
     # Try to find the last sentence boundary within the last 200 characters
-    window_start = max(0, max_length - 200)
     # Find all positions of sentence endings (. ! ?) followed by whitespace or end of string
     endings = [m.start() + 1 for m in re.finditer(r'[.!?](\s|$)', truncated)]
 
@@ -102,7 +120,14 @@ Return ONLY a valid JSON object matching this exact structure (do not include th
 {{
   "overall_score": <calculate an integer between 0 and 100>,
   "missing_keywords": ["List", "of", "missing", "skills"],
-  "top_suggestions": ["Specific actionable advice 1", "Specific actionable advice 2", "Specific actionable advice 3"],
+  "top_suggestions": [
+    {{
+      "type": "strength | gap | action",
+      "priority": "low | medium | high",
+      "text": "The recommendation text",
+      "action": "Suggested action to take"
+    }}
+  ],
   "verdict": "A brief 1-line summary assessment."
 }}"""
 
@@ -166,11 +191,26 @@ def default_analysis(resume_text: str, job_description: str) -> dict:
     missing = [kw for kw in keywords if kw not in matched][:10]
 
     suggestions = [
-        f"Add experience with '{kw}' to strengthen your match for this role."
+        {
+            "type": "gap",
+            "priority": "high",
+            "text": f"Add experience with '{kw}' to strengthen your match for this role.",
+            "action": "Update resume"
+        }
         for kw in missing[:3]
     ] if missing else [
-        "Your resume covers the key requirements. Consider adding quantifiable achievements.",
-        "Tailor your summary to highlight the most relevant experience first.",
+        {
+            "type": "action",
+            "priority": "medium",
+            "text": "Your resume covers the key requirements. Consider adding quantifiable achievements.",
+            "action": "Add metrics"
+        },
+        {
+            "type": "action",
+            "priority": "medium",
+            "text": "Tailor your summary to highlight the most relevant experience first.",
+            "action": "Edit summary"
+        },
     ]
 
     return {

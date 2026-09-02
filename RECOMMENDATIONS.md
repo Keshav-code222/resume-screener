@@ -159,9 +159,12 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       2000 chars mid-sentence.
       **Done 2026-09-01** — Implemented `_smart_truncate` helper to cut at sentence
       or word boundaries and increased limit to 4000 characters.
-- [ ] **15. Structured recommendations** — `backend/main.py:294` flattens every
+- [x] **15. Structured recommendations** — `backend/main.py:294` flattens every
       suggestion to content/high. Have the model return typed recs
       (strength/gap/action, priority).
+      **Done 2026-09-02** — updated `Recommendation` schema, `analyze_resume` prompt,
+      `_normalize_analysis`, and `_to_recommendations` to support typed recommendations
+      with priorities. Verified consistency between AI response and fallback analysis.
 
 ## 🟢 Code health
 
