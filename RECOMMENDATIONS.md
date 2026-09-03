@@ -168,11 +168,12 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ## 🟢 Code health
 
-- [ ] **16. Dead code** — delete root `_legacy/` (`frontend_old`),
+- [x] **16. Dead code** — delete root `_legacy/` (`frontend_old`),
       `backend/_legacy/` (Flask prototype), unused `parse_resume` /
       `extract_text_from_pdf` / `extract_text_from_docx` in
       `backend/resume_parser.py`, and `PyPDF2` from requirements (pdfplumber is
       used for all live extraction).
+      **Done 2026-09-03**
 - [ ] **17. Use `CreateAnalysisRequest` schema** — `backend/schemas.py:56` defined
       but `create_analysis` takes `payload: dict` (`backend/main.py:304`).
 - [ ] **18. Server-side password policy** — Login enforces 6 chars client-side only.
