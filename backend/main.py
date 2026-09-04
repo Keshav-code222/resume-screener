@@ -49,7 +49,7 @@ from models import (
 )
 from resume_parser import extract_skills
 from schemas import (
-    CompareAnalysesRequest, ForgotPasswordRequest, Recommendation,
+    CompareAnalysesRequest, CreateAnalysisRequest, ForgotPasswordRequest, Recommendation,
     ResetPasswordRequest, ResumeUploadResponse, Token, UserCreate, UserOut,
 )
 
@@ -570,19 +570,13 @@ def _to_recommendations(suggestions: List[dict]) -> List[Recommendation]:
 
 @analysis_router.post("", status_code=status.HTTP_201_CREATED)
 def create_analysis(
-    payload: dict,  # {"resume_id", "job_title", "job_description"}
+    payload: CreateAnalysisRequest,
     current: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    resume_id = payload.get("resume_id")
-    job_title = payload.get("job_title", "")
-    job_description = payload.get("job_description", "")
-
-    if not resume_id or not job_description:
-        raise HTTPException(
-            status_code=400,
-            detail="resume_id and job_description are required",
-        )
+    resume_id = payload.resume_id
+    job_title = payload.job_title
+    job_description = payload.job_description
 
     resume = (
         db.query(Resume)

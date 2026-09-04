@@ -174,8 +174,9 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       `backend/resume_parser.py`, and `PyPDF2` from requirements (pdfplumber is
       used for all live extraction).
       **Done 2026-09-03**
-- [ ] **17. Use `CreateAnalysisRequest` schema** — `backend/schemas.py:56` defined
+- [x] **17. Use `CreateAnalysisRequest` schema** — `backend/schemas.py:56` defined
       but `create_analysis` takes `payload: dict` (`backend/main.py:304`).
+      **Done 2026-09-04** — updated `create_analysis` in `backend/main.py` to use the Pydantic schema for request validation.
 - [ ] **18. Server-side password policy** — Login enforces 6 chars client-side only.
 - [ ] **19. `datetime.utcnow()` is deprecated** — `backend/auth/utils.py:32`; use
       timezone-aware now.
