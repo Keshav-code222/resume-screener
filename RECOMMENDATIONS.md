@@ -177,7 +177,8 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 - [x] **17. Use `CreateAnalysisRequest` schema** — `backend/schemas.py:56` defined
       but `create_analysis` takes `payload: dict` (`backend/main.py:304`).
       **Done 2026-09-04** — updated `create_analysis` in `backend/main.py` to use the Pydantic schema for request validation.
-- [ ] **18. Server-side password policy** — Login enforces 6 chars client-side only.
+- [x] **18. Server-side password policy** — Login enforces 6 chars client-side only.
+      **Done 2026-09-05** — added length check (min 6) to `signup` in `backend/main.py` to match `reset_password` behavior.
 - [ ] **19. `datetime.utcnow()` is deprecated** — `backend/auth/utils.py:32`; use
       timezone-aware now.
 - [ ] **20. Tests + CI** — none exist. Add API smoke test (signup → login → upload

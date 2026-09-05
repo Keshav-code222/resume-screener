@@ -188,6 +188,11 @@ auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
 @auth_router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")
 def signup(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
+    if len(payload.password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters",
+        )
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=409, detail="Email already exists")
