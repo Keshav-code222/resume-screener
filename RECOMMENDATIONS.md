@@ -179,8 +179,9 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       **Done 2026-09-04** — updated `create_analysis` in `backend/main.py` to use the Pydantic schema for request validation.
 - [x] **18. Server-side password policy** — Login enforces 6 chars client-side only.
       **Done 2026-09-05** — added length check (min 6) to `signup` in `backend/main.py` to match `reset_password` behavior.
-- [ ] **19. `datetime.utcnow()` is deprecated** — `backend/auth/utils.py:32`; use
+- [x] **19. `datetime.utcnow()` is deprecated** — `backend/auth/utils.py:32`; use
       timezone-aware now.
+      **Done 2026-09-06** — updated `create_access_token` in `backend/auth/utils.py` to use `datetime.now(timezone.utc)`.
 - [ ] **20. Tests + CI** — none exist. Add API smoke test (signup → login → upload
       → analyze).
 - [ ] **21. Observability** — only `print()` logging; add structured logging +
