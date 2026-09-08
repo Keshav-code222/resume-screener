@@ -182,8 +182,11 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 - [x] **19. `datetime.utcnow()` is deprecated** — `backend/auth/utils.py:32`; use
       timezone-aware now.
       **Done 2026-09-06** — updated `create_access_token` in `backend/auth/utils.py` to use `datetime.now(timezone.utc)`.
-- [ ] **20. Tests + CI** — none exist. Add API smoke test (signup → login → upload
+- [x] **20. Tests + CI** — none exist. Add API smoke test (signup → login → upload
       → analyze).
+      **Done 2026-09-08** — implemented `pytest` suite in `backend/tests/` with
+      end-to-end smoke test `test_full_resume_flow` and GitHub Actions workflow
+      `.github/workflows/backend-tests.yml`. Verified locally.
 - [ ] **21. Observability** — only `print()` logging; add structured logging +
       Sentry-style error tracking.
 
