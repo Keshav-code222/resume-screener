@@ -36,6 +36,10 @@ from fastapi.responses import FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
+import logging
+from logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 from ai import analyze_resume
 from auth.dependencies import get_current_user
@@ -61,12 +65,13 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):  # noqa: ARG001
+    setup_logging()
     # Create tables if they don't exist (safe to call repeatedly).
     try:
         init_db()
     except Exception as exc:  # pragma: no cover
         # Log but don't crash — endpoints that don't need the DB still work.
-        print(f"[startup] init_db failed: {exc}")
+        logger.error(f"init_db failed: {exc}")
     yield
 
 
@@ -266,8 +271,8 @@ def forgot_password(
         # app self-contained and testable without an email provider, we log
         # the link instead. Swap this for an actual email send when SMTP is
         # configured.
-        print(
-            f"[reset] Password reset link for {user.email}: "
+        logger.info(
+            f"Password reset link for {user.email}: "
             f"/reset-password?token={raw_token}"
         )
 
@@ -502,7 +507,7 @@ def delete_resume(
             if os.path.exists(file_path):
                 os.remove(file_path)
         except OSError as exc:  # pragma: no cover
-            print(f"[delete_resume] could not remove {file_path}: {exc}")
+            logger.warning(f"could not remove {file_path}: {exc}")
 
 
 @resume_router.get("/{resume_id}/download")

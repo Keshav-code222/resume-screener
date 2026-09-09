@@ -4,6 +4,10 @@ SQLAlchemy engine + session factory. Reads DATABASE_URL from the environment.
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
+
+logger = logging.getLogger(__name__)
+
 from dotenv import load_dotenv
 import os
 
@@ -16,7 +20,7 @@ if not DATABASE_URL:
     import pathlib
     DB_DIR = pathlib.Path(__file__).parent
     DATABASE_URL = f"sqlite:///{DB_DIR / 'sql_app.db'}"
-    print(f"[database] No DATABASE_URL set — using SQLite: {DATABASE_URL}")
+    logger.info(f"No DATABASE_URL set — using SQLite: {DATABASE_URL}")
 
 # SQLAlchemy needs postgresql+psycopg2 for the Postgres driver we ship.
 if DATABASE_URL.startswith("postgres://"):
@@ -60,7 +64,7 @@ def _ensure_resume_analyses_columns():
     if "verdict" not in existing:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE resume_analyses ADD COLUMN verdict TEXT"))
-        print("[database] Added missing 'verdict' column to resume_analyses")
+        logger.info("Added missing 'verdict' column to resume_analyses")
 
 
 def init_db():

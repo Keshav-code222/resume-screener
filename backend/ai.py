@@ -6,20 +6,14 @@ or the call fails.
 import os
 import json
 import re
+import logging
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-
-def _log(msg: str) -> None:
-    """Print a log line, safely encoding characters that may not be supported."""
-    try:
-        print(f"[ai] {msg}")
-    except UnicodeEncodeError:
-        safe = msg.encode("ascii", errors="replace").decode("ascii")
-        print(f"[ai] {safe}")
 
 
 def _normalize_analysis(data: dict) -> dict:
@@ -98,7 +92,7 @@ def analyze_resume(resume_text: str, job_description: str) -> dict:
     """Analyze resume using Groq API. Returns a dict with overall_score,
     missing_keywords, top_suggestions, and verdict."""
     if not GROQ_API_KEY:
-        _log("No GROQ_API_KEY set -- using default analysis")
+        logger.warning("No GROQ_API_KEY set -- using default analysis")
         return default_analysis(resume_text, job_description)
 
     try:
@@ -131,7 +125,7 @@ Return ONLY a valid JSON object matching this exact structure (do not include th
   "verdict": "A brief 1-line summary assessment."
 }}"""
 
-        _log("Calling Groq API...")
+        logger.debug("Calling Groq API...")
         message = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
@@ -140,26 +134,26 @@ Return ONLY a valid JSON object matching this exact structure (do not include th
         )
 
         response_text = message.choices[0].message.content
-        _log(f"Response received ({len(response_text)} chars)")
+        logger.debug(f"Response received ({len(response_text)} chars)")
 
         try:
             parsed = json.loads(response_text)
             normalized = _normalize_analysis(parsed)
-            _log(f"Score: {normalized['overall_score']}")
+            logger.debug(f"Score: {normalized['overall_score']}")
             return normalized
         except json.JSONDecodeError as e:
-            _log(f"JSON decode error: {e}")
-            _log("Using default analysis")
+            logger.error(f"JSON decode error: {e}")
+            logger.info("Using default analysis")
             return default_analysis(resume_text, job_description)
 
     except Exception as e:
-        _log(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return default_analysis(resume_text, job_description)
 
 
 def default_analysis(resume_text: str, job_description: str) -> dict:
     """Rule-based fallback when AI is unavailable."""
-    _log("Using default analysis")
+    logger.info("Using default analysis")
 
     # Simple keyword-match scoring
     resume_lower = resume_text.lower()

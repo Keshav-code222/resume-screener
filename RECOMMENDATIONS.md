@@ -187,8 +187,11 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       **Done 2026-09-08** — implemented `pytest` suite in `backend/tests/` with
       end-to-end smoke test `test_full_resume_flow` and GitHub Actions workflow
       `.github/workflows/backend-tests.yml`. Verified locally.
-- [ ] **21. Observability** — only `print()` logging; add structured logging +
+- [x] **21. Observability** — only `print()` logging; add structured logging +
       Sentry-style error tracking.
+      **Done 2026-09-09** — implemented `backend/logging_config.py` with environment-based
+      formatting (Human-readable/JSON) and Sentry integration via `sentry-sdk`.
+      Replaced all application `print()` calls with `logging` levels (DEBUG/INFO/WARNING/ERROR).
 
 ## 🔵 Nice-to-haves
 
