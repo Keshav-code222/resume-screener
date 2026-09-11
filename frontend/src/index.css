@@ -42,3 +42,9 @@ input, textarea, button, select {
 ::-webkit-scrollbar-track { background: #080808; }
 ::-webkit-scrollbar-thumb { background: #26221B; border-radius: 0; }
 ::-webkit-scrollbar-thumb:hover { background: #C9A961; }
+
+/* Accessibility: Visible focus states for all interactive elements */
+:focus-visible {
+  outline: 2px solid #C9A961 !important;
+  outline-offset: 2px !important;
+}

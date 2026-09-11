@@ -195,6 +195,9 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ## 🔵 Nice-to-haves
 
-- [ ] **22. Accessibility** — glyph icons (⊞◻◷◈) render inconsistently; 10–11px
+- [x] **22. Accessibility** — glyph icons (⊞◻◷◈) render inconsistently; 10–11px
       uppercase labels low-contrast; no visible focus states.
+      **Done 2026-09-11** — replaced glyphs with lucide-react; increased label
+      font-size to 12px; improved contrast for inactive labels (#BDB8B0);
+      added global :focus-visible gold ring in index.css.
 - [ ] **23. Route code-splitting** — lazy-load pages via React Router `lazy`.

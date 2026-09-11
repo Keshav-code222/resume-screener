@@ -105,7 +105,7 @@ export const theme = {
   // Label / uppercase eyebrow text
   label: {
     fontFamily: fonts.sans,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 500,
     letterSpacing: '0.24em',
     textTransform: 'uppercase',

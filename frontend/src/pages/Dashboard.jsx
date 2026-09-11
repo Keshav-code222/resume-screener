@@ -5,8 +5,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LayoutDashboard, FileText, History, Zap, LogOut, X } from 'lucide-react';
 import { api } from '../lib/api';
-import { colors, fonts, spacing, theme as t } from '../lib/theme';
+import { colors, fonts, theme as t } from '../lib/theme';
 import Logo from '../components/ui/Logo';
 import FilledButton from '../components/ui/FilledButton';
 import GhostButton from '../components/ui/GhostButton';
@@ -14,10 +15,10 @@ import GhostButton from '../components/ui/GhostButton';
 // ── Sidebar ──────────────────────────────────────────────────────────────
 function Sidebar({ user, active, setActive, navigate }) {
   const links = [
-    { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
-    { id: 'resumes',   label: 'My Resumes',  icon: '◻' },
-    { id: 'history',   label: 'History',     icon: '◷' },
-    { id: 'analyze',   label: 'Analyze',     icon: '◈' },
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={14} /> },
+    { id: 'resumes',   label: 'My Resumes',  icon: <FileText size={14} /> },
+    { id: 'history',   label: 'History',     icon: <History size={14} /> },
+    { id: 'analyze',   label: 'Analyze',     icon: <Zap size={14} /> },
   ];
 
   return (
@@ -63,7 +64,7 @@ function Sidebar({ user, active, setActive, navigate }) {
               borderRadius: 0,
               cursor: 'pointer',
               marginBottom: 4,
-              color: active === link.id ? colors.creamDim : colors.textDim,
+              color: active === link.id ? colors.creamDim : '#BDB8B0',
               fontFamily: fonts.sans,
               fontSize: 12,
               fontWeight: active === link.id ? 600 : 400,
@@ -73,7 +74,7 @@ function Sidebar({ user, active, setActive, navigate }) {
               transition: 'color 0.2s, background 0.2s',
             }}
           >
-            <span style={{ color: active === link.id ? colors.gold : colors.textDim, fontSize: 14 }}>
+            <span style={{ color: active === link.id ? colors.gold : colors.textMuted, display: 'flex', alignItems: 'center' }}>
               {link.icon}
             </span>
             {link.label}
@@ -120,7 +121,7 @@ function Sidebar({ user, active, setActive, navigate }) {
             border: 'none',
             borderRadius: 0,
             cursor: 'pointer',
-            color: colors.textDim,
+            color: '#BDB8B0',
             fontFamily: fonts.sans,
             fontSize: 12,
             letterSpacing: '0.12em',
@@ -128,7 +129,7 @@ function Sidebar({ user, active, setActive, navigate }) {
             textAlign: 'left',
           }}
         >
-          <span>↩</span> Sign out
+          <LogOut size={14} /> Sign out
         </motion.button>
       </div>
     </div>
@@ -1009,7 +1010,7 @@ function CompareView({ data, onClose, onOpen, onDelete }) {
                               : 'Not flagged by this role'
                           }
                         >
-                          {isMissing ? '✕' : '—'}
+                          {isMissing ? <X size={14} /> : '—'}
                         </td>
                       );
                     })}
@@ -1157,6 +1158,9 @@ function PreviewModal({ open, resume, onClose }) {
                 fontSize: 22,
                 padding: 4,
                 lineHeight: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.color = colors.creamDim)
@@ -1165,7 +1169,7 @@ function PreviewModal({ open, resume, onClose }) {
                 (e.currentTarget.style.color = colors.textDim)
               }
             >
-              ×
+              <X size={24} />
             </button>
           </div>
           <div style={{ flex: 1, position: 'relative', background: colors.ink }}>
