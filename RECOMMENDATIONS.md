@@ -200,4 +200,5 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       **Done 2026-09-11** — replaced glyphs with lucide-react; increased label
       font-size to 12px; improved contrast for inactive labels (#BDB8B0);
       added global :focus-visible gold ring in index.css.
-- [ ] **23. Route code-splitting** — lazy-load pages via React Router `lazy`.
+- [x] **23. Route code-splitting** — lazy-load pages via React Router `lazy`.
+      **Done 2026-09-11** — implemented `React.lazy` for all top-level pages in `App.jsx` with a themed `LoadingPage` fallback.
