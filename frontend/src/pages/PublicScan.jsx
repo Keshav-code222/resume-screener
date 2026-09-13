@@ -272,9 +272,7 @@ export default function PublicScan() {
     formData.append('job_description', jobDescription.trim());
 
     try {
-      const res = await api.post('/scan', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await api.post('/scan', formData);
       setAnalysis(normalizeScan(res.data, jobTitle.trim()));
     } catch (err) {
       if (err.response?.data?.detail) setError(err.response.data.detail);
