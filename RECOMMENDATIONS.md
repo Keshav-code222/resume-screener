@@ -202,3 +202,26 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
       added global :focus-visible gold ring in index.css.
 - [x] **23. Route code-splitting** — lazy-load pages via React Router `lazy`.
       **Done 2026-09-11** — implemented `React.lazy` for all top-level pages in `App.jsx` with a themed `LoadingPage` fallback.
+
+---
+
+## 🚀 Phase 2: Growth & Advanced Features
+
+### Quick Wins
+- [ ] **24. Analysis Export** — Add a feature to export AI analysis and recommendations as a professional PDF report.
+- [ ] **25. Sample JD Templates** — Provide "One-Click" sample JDs for common roles to facilitate instant testing.
+- [ ] **26. Result Caching** — Cache analysis based on Resume + JD hash to save Groq API quota and improve speed.
+- [ ] **27. Input Guardrails** — Add validation for gibberish/short inputs on `/scan` to prevent LLM confusion.
+
+### Feature Expansion
+- [ ] **28. The "Resume Fixer"** — Implement specific bullet-point rewrite suggestions rather than just identifying gaps.
+- [ ] **29. JD Optimizer** — Analyze JDs to extract hidden priorities and "must-haves" for the user.
+- [ ] **30. Target Role Profiles** — Allow users to save a "Target Role" and track match score progress over time.
+- [ ] **31. Best-Fit Recommendation** — Explicitly recommend the best-matching resume from a user's history for a specific JD.
+
+### Architectural / Advanced
+- [ ] **32. RAG Integration** — Use a vector DB for large resumes to find the most relevant evidence for scoring.
+- [ ] **33. PDF Visual Highlighting** — Return text coordinates to visually highlight strengths/gaps on the PDF.
+- [ ] **34. Recruiter Mode (Batch Scanning)** — Allow uploading multiple resumes against one JD to generate a ranked leaderboard.
+- [ ] **35. Social Auth (OAuth2)** — Implement "Sign in with Google/GitHub" to reduce signup friction.
+
