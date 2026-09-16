@@ -3,6 +3,7 @@
 // Action buttons are configurable so each caller supplies its own flow.
 
 import { motion } from 'framer-motion';
+import { api } from '../../lib/api';
 import { colors, fonts } from '../../lib/theme';
 import FilledButton from '../ui/FilledButton';
 import GhostButton from '../ui/GhostButton';
@@ -15,6 +16,26 @@ export default function AnalysisResults({
   secondaryAction,
 }) {
   const score = Number(analysis.match_score || 0);
+
+  const handleExport = async () => {
+    try {
+      const response = await api.get(`/api/analyses/${analysis.id}/export`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ResuMap_Report_${analysis.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export PDF. Please try again.');
+    }
+  };
 
   return (
     <motion.div
@@ -205,6 +226,9 @@ export default function AnalysisResults({
             {primaryLabel}
           </FilledButton>
         )}
+        <GhostButton onClick={handleExport} style={{ flex: 1 }}>
+          Export PDF
+        </GhostButton>
         {secondaryAction && (
           <GhostButton onClick={secondaryAction} style={{ flex: 1 }}>
             {secondaryLabel}

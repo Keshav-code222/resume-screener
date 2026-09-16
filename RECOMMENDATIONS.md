@@ -208,7 +208,8 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 ## 🚀 Phase 2: Growth & Advanced Features
 
 ### Quick Wins
-- [ ] **24. Analysis Export** — Add a feature to export AI analysis and recommendations as a professional PDF report.
+- [x] **24. Analysis Export** — Add a feature to export AI analysis and recommendations as a professional PDF report.
+  **Done 2026-09-16** — Implemented `backend/pdf_generator.py` (fpdf2) and `GET /api/analyses/{id}/export` endpoint; added "Export PDF" button to `AnalysisResults` component.
 - [ ] **25. Sample JD Templates** — Provide "One-Click" sample JDs for common roles to facilitate instant testing.
 - [ ] **26. Result Caching** — Cache analysis based on Resume + JD hash to save Groq API quota and improve speed.
 - [ ] **27. Input Guardrails** — Add validation for gibberish/short inputs on `/scan` to prevent LLM confusion.

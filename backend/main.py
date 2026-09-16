@@ -32,7 +32,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
@@ -42,6 +42,7 @@ from logging_config import setup_logging
 logger = logging.getLogger(__name__)
 
 from ai import analyze_resume
+from pdf_generator import generate_analysis_pdf
 from auth.dependencies import get_current_user
 from auth.utils import (
     _hash_reset_token, create_access_token, generate_reset_token,
@@ -705,6 +706,51 @@ def get_analysis(
         "verdict": analysis.verdict,
         "generated_at": analysis.generated_at.isoformat() if analysis.generated_at else None,
     }
+
+
+@analysis_router.get("/{analysis_id}/export")
+def export_analysis(
+    analysis_id: str,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate a professional PDF report for a specific analysis."""
+    analysis = (
+        db.query(ResumeAnalysis)
+        .join(Resume, ResumeAnalysis.resume_id == Resume.id)
+        .filter(
+            ResumeAnalysis.id == analysis_id, Resume.user_id == current.id
+        )
+        .first()
+    )
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    def _maybe_load(value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                return value
+        return value
+
+    report_data = {
+        "job_title": analysis.job_title,
+        "match_score": float(analysis.match_score or 0),
+        "verdict": analysis.verdict,
+        "missing_skills": _maybe_load(analysis.missing_skills) or [],
+        "recommendations": _maybe_load(analysis.recommendations) or [],
+    }
+
+    pdf_bytes = generate_analysis_pdf(report_data)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="ResuMap_Report_{analysis_id}.pdf"'
+        },
+    )
 
 
 @analysis_router.post("/compare")
