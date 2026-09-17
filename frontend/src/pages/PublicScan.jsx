@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import { colors, fonts, theme as t } from '../lib/theme';
+import { SAMPLE_JDS } from '../lib/samples';
 import Logo from '../components/ui/Logo';
 import FilledButton from '../components/ui/FilledButton';
 import GhostButton from '../components/ui/GhostButton';
@@ -213,6 +214,39 @@ function ScanForm({
           >
             Job Description
           </label>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            {Object.entries(SAMPLE_JDS).map(([key, sample]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setJobTitle(sample.title);
+                  setJobDescription(sample.description);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textMuted,
+                  fontSize: 11,
+                  fontFamily: fonts.sans,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.goldMuted;
+                  e.currentTarget.style.color = colors.cream;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.color = colors.textMuted;
+                }}
+              >
+                {sample.title}
+              </button>
+            ))}
+          </div>
           <textarea
             placeholder="Paste the complete job description here..."
             value={jobDescription}
