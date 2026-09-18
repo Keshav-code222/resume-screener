@@ -37,6 +37,16 @@ def anyio_backend():
     return "asyncio"
 
 @pytest.fixture
+def db():
+    """Provide a database session for tests."""
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture
 async def client():
     """
     Provide an AsyncClient that uses the FastAPI app as the transport.

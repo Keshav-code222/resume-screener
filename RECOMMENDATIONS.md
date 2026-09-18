@@ -212,7 +212,8 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
   **Done 2026-09-16** — Implemented `backend/pdf_generator.py` (fpdf2) and `GET /api/analyses/{id}/export` endpoint; added "Export PDF" button to `AnalysisResults` component.
 - [x] **25. Sample JD Templates** — Provide "One-Click" sample JDs for common roles to facilitate instant testing.
   **Done 2026-09-17** — implemented `frontend/src/lib/samples.js` and added role-selection chips to `PublicScan.jsx` and `Analyze.jsx` to instantly populate Job Title and Description.
-- [ ] **26. Result Caching** — Cache analysis based on Resume + JD hash to save Groq API quota and improve speed.
+- [x] **26. Result Caching** — Cache analysis based on Resume + JD hash to save Groq API quota and improve speed.
+  **Done 2026-09-18** — implemented `AnalysisCache` model, hashing utilities in `main.py`, and integrated caching into `/scan` and `create_analysis`. Verified with `backend/tests/test_caching.py`.
 - [ ] **27. Input Guardrails** — Add validation for gibberish/short inputs on `/scan` to prevent LLM confusion.
 
 ### Feature Expansion

@@ -126,6 +126,17 @@ class Subscription(Base):
     owner = relationship("User", back_populates="subscription")
 
 
+class AnalysisCache(Base):
+    __tablename__ = "analysis_cache"
+
+    content_hash = Column(String(64), primary_key=True, index=True)
+    match_score = Column(Numeric(5, 2), nullable=True)
+    missing_skills = Column(_json_type(), nullable=True)
+    recommendations = Column(_json_type(), nullable=True)
+    verdict = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class PasswordResetToken(Base):
     """One-time password reset tokens.
 

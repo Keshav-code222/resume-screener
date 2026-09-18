@@ -21,6 +21,7 @@ import io
 import json
 import os
 import uuid
+import hashlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List
@@ -141,7 +142,9 @@ async def scan_resume(
     request: Request,
     file: UploadFile = File(...),
     job_description: str = Form(...),
+    db: Session = Depends(get_db),
 ):
+    print("DEBUG: Entering scan_resume")
     """Anonymous single-shot scan. Returns AI analysis only — does not save."""
     if not file.filename or not any(
         file.filename.lower().endswith(ext) for ext in ALLOWED_RESUME_EXT
@@ -155,15 +158,7 @@ async def scan_resume(
         if len(content) > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail="File too large (max 10MB)")
 
-        if file.filename.lower().endswith(".pdf"):
-            with pdfplumber.open(io.BytesIO(content)) as pdf:
-                resume_text = "".join(
-                    (page.extract_text() or "") for page in pdf.pages
-                )
-        else:  # .docx
-            from docx import Document
-            doc = Document(io.BytesIO(content))
-            resume_text = "\n".join(p.text for p in doc.paragraphs)
+        resume_text = _extract_text(file.filename, content)
     except HTTPException:
         raise
     except Exception as exc:
@@ -177,12 +172,20 @@ async def scan_resume(
             detail="Could not extract text from the file. It may be image-only.",
         )
 
+    print("DEBUG: About to enter try block")
     try:
-        result = analyze_resume(resume_text, job_description)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"AI analysis failed: {exc}")
+        # Try cache first.
+        cached = _get_cached_analysis(db, resume_text, job_description)
+        if cached:
+            return cached
 
-    return result
+        result = analyze_resume(resume_text, job_description)
+        _save_cached_analysis(db, resume_text, job_description, result)
+        return result
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -393,6 +396,38 @@ def _extract_text(filename: str, content: bytes) -> str:
     raise HTTPException(status_code=400, detail="Unsupported file type")
 
 
+def _get_cached_analysis(db: Session, resume_text: str, job_description: str) -> dict | None:
+    """Retrieve AI analysis from cache if inputs match exactly."""
+    combined = (resume_text + "|||" + job_description).encode("utf-8")
+    h = hashlib.sha256(combined).hexdigest()
+    from models import AnalysisCache
+    cache = db.query(AnalysisCache).filter(AnalysisCache.content_hash == h).first()
+    if cache:
+        return {
+            "overall_score": float(cache.match_score or 0),
+            "missing_keywords": cache.missing_skills or [],
+            "top_suggestions": cache.recommendations or [],
+            "verdict": cache.verdict or "",
+        }
+    return None
+
+
+def _save_cached_analysis(db: Session, resume_text: str, job_description: str, result: dict):
+    """Save AI analysis result to the global cache."""
+    combined = (resume_text + "|||" + job_description).encode("utf-8")
+    h = hashlib.sha256(combined).hexdigest()
+    from models import AnalysisCache
+    cache_entry = AnalysisCache(
+        content_hash=h,
+        match_score=result.get("overall_score", 0),
+        missing_skills=result.get("missing_keywords", []),
+        recommendations=result.get("top_suggestions", []),
+        verdict=result.get("verdict", ""),
+    )
+    db.add(cache_entry)
+    db.commit()
+
+
 @resume_router.get("", response_model=List[dict])
 def list_resumes(
     current: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -598,7 +633,14 @@ def create_analysis(
         raise HTTPException(status_code=404, detail="Resume not found")
 
     try:
-        result = analyze_resume(resume.raw_text or "", job_description)
+        resume_text = resume.raw_text or ""
+        # Try cache first.
+        cached = _get_cached_analysis(db, resume_text, job_description)
+        if cached:
+            result = cached
+        else:
+            result = analyze_resume(resume_text, job_description)
+            _save_cached_analysis(db, resume_text, job_description, result)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"AI analysis failed: {exc}")
 
