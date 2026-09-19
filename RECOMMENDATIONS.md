@@ -214,7 +214,8 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
   **Done 2026-09-17** — implemented `frontend/src/lib/samples.js` and added role-selection chips to `PublicScan.jsx` and `Analyze.jsx` to instantly populate Job Title and Description.
 - [x] **26. Result Caching** — Cache analysis based on Resume + JD hash to save Groq API quota and improve speed.
   **Done 2026-09-18** — implemented `AnalysisCache` model, hashing utilities in `main.py`, and integrated caching into `/scan` and `create_analysis`. Verified with `backend/tests/test_caching.py`.
-- [ ] **27. Input Guardrails** — Add validation for gibberish/short inputs on `/scan` to prevent LLM confusion.
+- [x] **27. Input Guardrails** — Add validation for gibberish/short inputs on `/scan` to prevent LLM confusion.
+  **Done 2026-09-19** — Implemented `backend/guardrails.py` and integrated checks into `/scan` and `create_analysis` to reject low-quality inputs (length, repetition, density) with a 400 error.
 
 ### Feature Expansion
 - [ ] **28. The "Resume Fixer"** — Implement specific bullet-point rewrite suggestions rather than just identifying gaps.

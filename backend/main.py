@@ -54,6 +54,7 @@ from models import (
     PasswordResetToken, Resume, ResumeAnalysis, Subscription, User,
 )
 from resume_parser import extract_skills
+from guardrails import is_low_quality_input
 from schemas import (
     CompareAnalysesRequest, CreateAnalysisRequest, ForgotPasswordRequest, Recommendation,
     ResetPasswordRequest, ResumeUploadResponse, Token, UserCreate, UserOut,
@@ -170,6 +171,12 @@ async def scan_resume(
         raise HTTPException(
             status_code=400,
             detail="Could not extract text from the file. It may be image-only.",
+        )
+
+    if is_low_quality_input(resume_text) or is_low_quality_input(job_description):
+        raise HTTPException(
+            status_code=400,
+            detail="The resume text or job description appears to be invalid or too short for analysis.",
         )
 
     print("DEBUG: About to enter try block")
@@ -634,6 +641,13 @@ def create_analysis(
 
     try:
         resume_text = resume.raw_text or ""
+
+        if is_low_quality_input(resume_text) or is_low_quality_input(job_description):
+            raise HTTPException(
+                status_code=400,
+                detail="The resume text or job description appears to be invalid or too short for analysis."
+            )
+
         # Try cache first.
         cached = _get_cached_analysis(db, resume_text, job_description)
         if cached:
