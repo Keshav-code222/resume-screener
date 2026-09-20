@@ -58,6 +58,7 @@ from guardrails import is_low_quality_input
 from schemas import (
     CompareAnalysesRequest, CreateAnalysisRequest, ForgotPasswordRequest, Recommendation,
     ResetPasswordRequest, ResumeUploadResponse, Token, UserCreate, UserOut,
+    ResumeFixRequest, ResumeFixResponse,
 )
 
 load_dotenv()
@@ -807,6 +808,58 @@ def export_analysis(
             "Content-Disposition": f'attachment; filename="ResuMap_Report_{analysis_id}.pdf"'
         },
     )
+
+
+@analysis_router.post("/{analysis_id}/fix", response_model=ResumeFixResponse)
+def fix_recommendation(
+    analysis_id: str,
+    payload: ResumeFixRequest,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Generate a specific rewrite for a recommendation using the AI Fixer.
+    Verifies analysis ownership before calling the AI.
+    """
+    # 1. Verify ownership and existence
+    analysis = (
+        db.query(ResumeAnalysis)
+        .join(Resume, ResumeAnalysis.resume_id == Resume.id)
+        .filter(
+            ResumeAnalysis.id == analysis_id, Resume.user_id == current.id
+        )
+        .first()
+    )
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    # 2. Get the specific recommendation
+    recs = analysis.recommendations or []
+    if not isinstance(recs, list):
+        recs = []
+
+    idx = payload.recommendation_index
+    if idx < 0 or idx >= len(recs):
+        raise HTTPException(status_code=400, detail="Invalid recommendation index")
+
+    rec_data = recs[idx]
+    # Support both dict (from DB) and Recommendation model
+    rec_text = rec_data.get("text", "") if isinstance(rec_data, dict) else rec_data.text
+
+    # 3. Get resume text
+    resume = db.query(Resume).filter(Resume.id == analysis.resume_id).first()
+    if not resume or not resume.raw_text:
+        raise HTTPException(status_code=404, detail="Resume text not found")
+
+    # 4. Call AI Fixer
+    from ai import generate_resume_fix
+    result = generate_resume_fix(
+        resume_text=resume.raw_text,
+        job_description=analysis.job_description,
+        recommendation_text=rec_text,
+    )
+
+    return result
 
 
 @analysis_router.post("/compare")

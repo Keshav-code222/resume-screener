@@ -209,7 +209,7 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ### Quick Wins
 - [x] **24. Analysis Export** — Add a feature to export AI analysis and recommendations as a professional PDF report.
-  **Done 2026-09-16** — Implemented `backend/pdf_generator.py` (fpdf2) and `GET /api/analyses/{id}/export` endpoint; added "Export PDF" button to `AnalysisResults` component.
+  **Done 2026-09-16** — Implemented `backend/pdf_generator.py` (fpdf2) and `GET /api/analyses/{id}/export` endpoint; added "Export PDF" button to `AnalysisResults` component
 - [x] **25. Sample JD Templates** — Provide "One-Click" sample JDs for common roles to facilitate instant testing.
   **Done 2026-09-17** — implemented `frontend/src/lib/samples.js` and added role-selection chips to `PublicScan.jsx` and `Analyze.jsx` to instantly populate Job Title and Description.
 - [x] **26. Result Caching** — Cache analysis based on Resume + JD hash to save Groq API quota and improve speed.
@@ -218,7 +218,7 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
   **Done 2026-09-19** — Implemented `backend/guardrails.py` and integrated checks into `/scan` and `create_analysis` to reject low-quality inputs (length, repetition, density) with a 400 error.
 
 ### Feature Expansion
-- [ ] **28. The "Resume Fixer"** — Implement specific bullet-point rewrite suggestions rather than just identifying gaps.
+- [x] **28. The "Resume Fixer"** — Implement specific bullet-point rewrite suggestions rather than just identifying gaps.
 - [ ] **29. JD Optimizer** — Analyze JDs to extract hidden priorities and "must-haves" for the user.
 - [ ] **30. Target Role Profiles** — Allow users to save a "Target Role" and track match score progress over time.
 - [ ] **31. Best-Fit Recommendation** — Explicitly recommend the best-matching resume from a user's history for a specific JD.

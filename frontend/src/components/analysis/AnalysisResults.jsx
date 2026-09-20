@@ -2,11 +2,13 @@
 // Used by the live scan (Analyze) and by saved analyses (SavedAnalysis).
 // Action buttons are configurable so each caller supplies its own flow.
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
 import { api } from '../../lib/api';
 import { colors, fonts } from '../../lib/theme';
 import FilledButton from '../ui/FilledButton';
 import GhostButton from '../ui/GhostButton';
+import { Sparkles, Copy, Loader2 } from 'lucide-react';
 
 export default function AnalysisResults({
   analysis,
@@ -15,7 +17,32 @@ export default function AnalysisResults({
   secondaryLabel = 'Back to Dashboard',
   secondaryAction,
 }) {
+  const [fixingIndex, setFixingIndex] = useState(null);
+  const [fixes, setFixes] = useState({});
   const score = Number(analysis.match_score || 0);
+
+  const handleFix = async (index) => {
+    setFixingIndex(index);
+    try {
+      const res = await api.post(`/api/analyses/${analysis.id}/fix`, {
+        recommendation_index: index,
+      });
+      setFixes((prev) => ({ ...prev, [index]: res.data }));
+    } catch (err) {
+      console.error('Fix failed:', err);
+      alert('Failed to generate fix. Please try again.');
+    } finally {
+      setFixingIndex(null);
+    }
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
 
   const handleExport = async () => {
     try {
@@ -213,6 +240,87 @@ export default function AnalysisResults({
                     {rec.action}
                   </p>
                 )}
+
+                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                  <GhostButton
+                    small
+                    onClick={() => handleFix(idx)}
+                    disabled={fixingIndex === idx}
+                    style={{ gap: 6, fontSize: 11, padding: '4px 10px' }}
+                  >
+                    {fixingIndex === idx ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} />
+                    )}
+                    {fixingIndex === idx ? 'Generating...' : 'Fix this'}
+                  </GhostButton>
+                </div>
+
+                <AnimatePresence>
+                  {fixes[idx] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      style={{
+                        marginTop: 16,
+                        paddingTop: 16,
+                        borderTop: `1px solid ${colors.border}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 16,
+                      }}
+                    >
+                      {fixes[idx].suggestions.map((sug, sIdx) => (
+                        <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{
+                            background: colors.card,
+                            padding: '12px',
+                            borderRadius: 4,
+                            border: `1px solid ${colors.border}`,
+                            color: colors.cream,
+                            fontFamily: fonts.sans,
+                            fontSize: 13,
+                            lineHeight: 1.5,
+                            position: 'relative'
+                          }}>
+                            {sug.content}
+                            <button
+                              onClick={() => copyToClipboard(sug.content)}
+                              style={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                background: 'transparent',
+                                border: 'none',
+                                color: colors.gold,
+                                cursor: 'pointer',
+                                padding: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Copy to clipboard"
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                          <p style={{
+                            fontSize: 11,
+                            color: colors.textMuted,
+                            fontFamily: fonts.sans,
+                            fontStyle: 'italic',
+                            marginLeft: 4
+                          }}>
+                            {sug.explanation}
+                          </p>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               </div>
             ))}
           </div>

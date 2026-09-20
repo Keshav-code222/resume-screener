@@ -96,3 +96,16 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+# ----- Resume Fixer -----
+class ResumeFixRequest(BaseModel):
+    recommendation_index: int
+
+class ResumeFixSuggestion(BaseModel):
+    type: str # "bullet_point", "summary"
+    content: str
+    explanation: str
+
+class ResumeFixResponse(BaseModel):
+    original_recommendation: str
+    suggestions: List[ResumeFixSuggestion]

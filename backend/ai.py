@@ -215,3 +215,87 @@ def default_analysis(resume_text: str, job_description: str) -> dict:
                    f"{' Core gaps remain.' if score < 50 else ''}"
                    f"{' Strong alignment.' if score >= 70 else ''}",
     }
+
+def generate_resume_fix(resume_text: str, job_description: str, recommendation_text: str) -> dict:
+    """
+    Generate specific rewritten bullet points or summary additions to address a particular gap.
+    """
+    if not GROQ_API_KEY:
+        logger.warning("No GROQ_API_KEY set -- using fallback fix")
+        return {
+            "original_recommendation": recommendation_text,
+            "suggestions": [
+                {
+                    "type": "bullet_point",
+                    "content": f"Consider adding a bullet point that explicitly mentions your experience related to: {recommendation_text}",
+                    "explanation": "Explicitly mentioning the skill helps pass ATS and recruiter screens."
+                }
+            ]
+        }
+
+    try:
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+
+        prompt = f"""You are a world-class professional resume writer and technical career coach.
+Your goal is to help a candidate demonstrate a specific skill or experience gap identified during a resume analysis.
+
+RESUME:
+{_smart_truncate(resume_text, 4000)}
+
+JOB DESCRIPTION:
+{_smart_truncate(job_description, 4000)}
+
+RECOMMENDATION TO FIX:
+{recommendation_text}
+
+TASK:
+Suggest 2-3 specific, high-impact rewritten bullet points or a new professional summary section that addresses this gap.
+- If the candidate has some related experience, rewrite existing bullets to emphasize the missing skill.
+- If the candidate lacks the experience entirely, provide "template" bullets that they can adapt by adding their own specific projects or metrics.
+- Use the STAR method (Situation, Task, Action, Result) and include placeholders for metrics (e.g., "[X]% increase in efficiency").
+- Ensure the tone is professional, confident, and tailored to the provided job description.
+
+Return ONLY a valid JSON object:
+{{
+  "suggestions": [
+    {{
+      "type": "bullet_point",
+      "content": "The rewritten or new bullet point...",
+      "explanation": "Why this rewrite is effective."
+    }},
+    {{
+      "type": "summary",
+      "content": "Suggested professional summary addition...",
+      "explanation": "How this positions the candidate better."
+    }}
+  ]
+}}"""
+
+        message = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800,
+            response_format={"type": "json_object"},
+        )
+
+        response_text = message.choices[0].message.content
+        parsed = json.loads(response_text)
+
+        return {
+            "original_recommendation": recommendation_text,
+            "suggestions": parsed.get("suggestions", [])
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating resume fix: {e}")
+        return {
+            "original_recommendation": recommendation_text,
+            "suggestions": [
+                {
+                    "type": "bullet_point",
+                    "content": "Unable to generate AI fix. Try adding a bullet point detailing your experience with the missing skill using the STAR method.",
+                    "explanation": "Standard professional advice for addressing skill gaps."
+                }
+            ]
+        }
