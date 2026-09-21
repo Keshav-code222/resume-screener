@@ -1028,6 +1028,41 @@ def delete_analysis(
 
 
 # ---------------------------------------------------------------------------
+# JD Optimizer
+# ---------------------------------------------------------------------------
+jd_router = APIRouter(prefix="/api/jd", tags=["jd"])
+
+
+@jd_router.post("/optimize", response_model=JDOptimizeResponse)
+@limiter.limit("20/minute")
+def optimize_jd(
+    request: Request,
+    payload: JDOptimizeRequest,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Analyze a Job Description independently to extract must-haves,
+    hidden priorities, and success metrics (KPIs).
+    """
+    jd_text = payload.job_description
+
+    if is_low_quality_input(jd_text):
+        raise HTTPException(
+            status_code=400,
+            detail="The job description appears to be invalid or too short for optimization.",
+        )
+
+    try:
+        from ai import optimize_job_description
+        result = optimize_job_description(jd_text)
+        return result
+    except Exception as exc:
+        logger.error(f"JD optimization failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"AI optimization failed: {exc}")
+
+
+# ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
 @app.get("/")
@@ -1059,6 +1094,8 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(resume_router)
 app.include_router(analysis_router)
+app.include_router(jd_router)
+
 
 
 if __name__ == "__main__":

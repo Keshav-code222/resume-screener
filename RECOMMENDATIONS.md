@@ -219,7 +219,8 @@ Each item is a self-contained change. Mark `[x]` when done. Start new sessions w
 
 ### Feature Expansion
 - [x] **28. The "Resume Fixer"** — Implement specific bullet-point rewrite suggestions rather than just identifying gaps.
-- [ ] **29. JD Optimizer** — Analyze JDs to extract hidden priorities and "must-haves" for the user.
+- [x] **29. JD Optimizer** — Analyze JDs to extract hidden priorities and "must-haves" for the user.
+  **Done 2026-09-21** — Implemented `POST /api/jd/optimize` endpoint and `optimize_job_description` AI logic to extract Must-Haves, Hidden Priorities, and KPIs using a structured JSON prompt. Verified integration with auth and rate limiting.
 - [ ] **30. Target Role Profiles** — Allow users to save a "Target Role" and track match score progress over time.
 - [ ] **31. Best-Fit Recommendation** — Explicitly recommend the best-matching resume from a user's history for a specific JD.
 

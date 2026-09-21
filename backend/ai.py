@@ -216,7 +216,80 @@ def default_analysis(resume_text: str, job_description: str) -> dict:
                    f"{' Strong alignment.' if score >= 70 else ''}",
     }
 
+def optimize_job_description(job_description: str) -> dict:
+    """
+    Analyze a job description to extract hidden priorities, must-haves, and KPIs.
+    Returns a structured dict for the JD Optimizer.
+    """
+    if not GROQ_API_KEY:
+        logger.warning("No GROQ_API_KEY set -- using default JD optimization")
+        return {
+            "must_haves": [],
+            "hidden_priorities": [],
+            "kpis": [],
+            "summary_analysis": "AI analysis unavailable. Please review the JD manually for key requirements."
+        }
+
+    try:
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+
+        prompt = f"""You are a world-class Technical Recruiting Strategist.
+Your goal is to decode a job description to find not just what is explicitly stated, but what the company *actually* values.
+
+JOB DESCRIPTION:
+{_smart_truncate(job_description, 4000)}
+
+TASK:
+Analyze the JD and extract the following:
+1. **Must-Haves**: Hard, non-negotiable requirements (e.g., specific years of experience, mandatory certifications, core languages).
+2. **Hidden Priorities**: Implicit needs. Read between the lines. (e.g., "fast-paced environment" suggests a need for ambiguity tolerance; "modernizing legacy systems" suggests a need for migration experience and patience).
+3. **Success Metrics (KPIs)**: What does "winning" look like in this role? What are the likely targets the person will be measured against?
+
+Return ONLY a valid JSON object matching this exact structure:
+{{
+  "must_haves": [
+    {{ "category": "must-have", "description": "The requirement", "why": "Why this is critical" }}
+  ],
+  "hidden_priorities": [
+    {{ "category": "hidden-priority", "description": "The inferred need", "why": "The clue in the JD that suggests this" }}
+  ],
+  "kpis": [
+    {{ "category": "kpi", "description": "The success metric", "why": "Why this is a likely goal" }}
+  ],
+  "summary_analysis": "A 2-3 sentence strategic overview of the role's true nature."
+}}"""
+
+        logger.debug("Calling Groq API for JD optimization...")
+        message = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+            response_format={"type": "json_object"},
+        )
+
+        response_text = message.choices[0].message.content
+        parsed = json.loads(response_text)
+
+        # Basic normalization to ensure lists exist
+        return {
+            "must_haves": parsed.get("must_haves", []),
+            "hidden_priorities": parsed.get("hidden_priorities", []),
+            "kpis": parsed.get("kpis", []),
+            "summary_analysis": parsed.get("summary_analysis", "No summary provided."),
+        }
+
+    except Exception as e:
+        logger.error(f"Error optimizing JD: {e}")
+        return {
+            "must_haves": [],
+            "hidden_priorities": [],
+            "kpis": [],
+            "summary_analysis": f"An error occurred during AI optimization: {e}",
+        }
+
 def generate_resume_fix(resume_text: str, job_description: str, recommendation_text: str) -> dict:
+
     """
     Generate specific rewritten bullet points or summary additions to address a particular gap.
     """

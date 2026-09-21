@@ -97,6 +97,22 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+# ----- JD Optimizer -----
+class JDOptimizeRequest(BaseModel):
+    job_title: Optional[str] = None
+    job_description: str
+
+class JDPriority(BaseModel):
+    category: str  # "must-have", "hidden-priority", "kpi"
+    description: str
+    why: Optional[str] = None
+
+class JDOptimizeResponse(BaseModel):
+    must_haves: List[JDPriority] = []
+    hidden_priorities: List[JDPriority] = []
+    kpis: List[JDPriority] = []
+    summary_analysis: str
+
 # ----- Resume Fixer -----
 class ResumeFixRequest(BaseModel):
     recommendation_index: int
